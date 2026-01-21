@@ -14,3 +14,11 @@ without setup, accounts, or tracking.
 
 ## Status
 Early prototype. UX and backend coming next.
+
+## How it works
+
+1. Paste a single-file HTML prototype
+2. Preview it instantly in a sandboxed environment
+3. Share a link for quick feedback
+
+No accounts. No setup. No tracking.
