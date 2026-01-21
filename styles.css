@@ -630,6 +630,22 @@ img{ max-width:100%; display:block; }
 @media (max-width: 980px){
   .upsell{ grid-template-columns: 1fr; }
 }
+
+.upsell-left{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.upsell-right{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  align-items:flex-end;
+  text-align:right;
+}
+@media (max-width: 980px){
+  .upsell-right{ align-items:flex-start; text-align:left; }
+}
 .upsell-label{
   font-size: 11px;
   letter-spacing: .12em;
