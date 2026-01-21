@@ -1,487 +1,420 @@
+<!-- =========================
+VIBESNAP — index.html (App)
+========================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="color-scheme" content="dark" />
-  <title>VibeSnap</title>
+  <title>VibeSnap — Preview AI-generated prototypes instantly</title>
+  <meta name="description" content="Paste a prototype. Launch it instantly. Run code safely in a sandbox, collect feedback, and validate faster." />
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="container topbar-inner">
-      <div class="brand" role="button" tabindex="0" data-nav="app" aria-label="Go to app">
-        <span class="brand-mark" aria-hidden="true">🔥</span>
-        <span class="brand-name">vibesnap</span>
+  <main class="shell">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand" role="banner" aria-label="VibeSnap">
+        <div class="mark" aria-hidden="true">🔥</div>
+        <div class="word">vibesnap</div>
       </div>
 
-      <nav class="tabs" aria-label="Primary navigation">
-        <button class="tab is-active" data-tab="preview" type="button">Preview prototype</button>
-        <button class="tab" data-tab="prompt" type="button">Prompt builder</button>
-        <button class="tab" data-tab="import" type="button">Import helper</button>
-        <button class="tab tab-accent" data-nav="pricing" type="button">Pricing</button>
+      <nav class="topnav" aria-label="Primary">
+        <button class="pill is-active" id="navPreview" type="button" aria-controls="panelPreview" aria-selected="true">Preview prototype</button>
+        <button class="pill" id="navPrompt" type="button" aria-controls="panelPrompt" aria-selected="false">Prompt builder</button>
+        <button class="pill" id="navImport" type="button" aria-controls="panelImport" aria-selected="false">Import helper</button>
+        <a class="pill pill-link" href="pricing.html" aria-label="Go to pricing page">Pricing</a>
       </nav>
-    </div>
-  </header>
+    </header>
 
-  <!-- APP PAGE -->
-  <main id="pageApp" class="page page-active">
+    <!-- Hero -->
     <section class="hero">
-      <div class="container hero-inner">
-        <h1>Generate anywhere. Validate here.</h1>
-        <p class="hero-sub">
-          Paste HTML from ChatGPT, Claude, Gemini, or anywhere. Launch it safely in a sandbox. Then share it for quick feedback.
-        </p>
-
-        <div class="pill-row" role="list" aria-label="Product guarantees">
-          <span class="pill" role="listitem">Runs locally</span>
-          <span class="pill" role="listitem">Sandboxed preview</span>
-          <span class="pill" role="listitem">No cookies</span>
-          <span class="pill" role="listitem">No tracking pixels</span>
-        </div>
-
-        <p class="hero-privacy">
-          Your ideas stay yours. We don’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
-        </p>
-      </div>
-    </section>
-
-    <section class="container grid">
-      <!-- LEFT: Prototype code -->
-      <section class="card card-lg">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">Prototype code</h2>
-            <p class="card-sub">Paste a single-file HTML prototype (inline CSS + JS). Then launch and test.</p>
-          </div>
-
-          <div class="card-actions">
-            <button id="btnPasteStarter" class="btn btn-ghost" type="button">Paste starter</button>
-            <button id="btnDownloadHtml" class="btn btn-ghost" type="button">Download HTML</button>
-            <button id="btnClearCode" class="btn btn-ghost" type="button">Clear</button>
-          </div>
-        </header>
-
-        <label class="field-label" for="codeInput">Prototype HTML</label>
-        <div class="editor">
-          <textarea id="codeInput" spellcheck="false" autocomplete="off" autocapitalize="off"
-            placeholder="Paste a complete HTML file here (including &lt;html&gt;). Keep it self-contained for best results."></textarea>
-        </div>
-
-        <div class="row row-between row-tight">
-          <button id="btnLaunch" class="btn btn-primary" type="button">
-            <span class="btn-label">Launch preview</span>
-            <span class="spinner" aria-hidden="true"></span>
-          </button>
-
-          <div class="muted">
-            <span id="saveStatus">Nothing saved</span>
-            <button id="btnClearSaved" class="linklike" type="button">Clear saved</button>
-          </div>
-        </div>
-
-        <div class="subsection">
-          <h3 class="subhead">Share + validate</h3>
-          <p class="muted">Create a share link, then collect quick feedback. No accounts required.</p>
-
-          <div class="row row-wrap">
-            <button id="btnCreateShare" class="btn btn-secondary" type="button">Create share link</button>
-            <button id="btnOpenNewTab" class="btn btn-ghost" type="button">Open in new tab</button>
-          </div>
-
-          <label class="field-label" for="shareLink">Share link</label>
-          <div class="row">
-            <input id="shareLink" class="input" type="text" readonly placeholder="Create a link to share this prototype…" />
-            <button id="btnCopyShareLink" class="btn btn-ghost" type="button">Copy</button>
-          </div>
-
-          <div class="tip">
-            Tip: post the link with one question like “Would you use this?” or “What’s missing?”
-            <div class="row row-wrap" style="margin-top:10px;">
-              <button id="btnCopyShareText" class="btn btn-ghost" type="button">Copy share text</button>
-              <button id="btnResetLink" class="btn btn-ghost" type="button">Reset link</button>
-            </div>
-          </div>
-
-          <div class="note">
-            <strong>Safety note</strong><br />
-            This preview runs inside a sandboxed iframe. For best results, keep prototypes self-contained and avoid unknown external scripts.
-          </div>
-        </div>
-      </section>
-
-      <!-- RIGHT: Live preview -->
-      <section class="card card-lg">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">Live preview</h2>
-            <p class="card-sub">Your prototype runs here. Use Reload if it gets stuck.</p>
-          </div>
-          <div class="card-actions">
-            <button id="btnReload" class="btn btn-ghost" type="button">Reload</button>
-          </div>
-        </header>
-
-        <div class="preview-shell">
-          <iframe
-            id="previewFrame"
-            title="Sandboxed prototype preview"
-            sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"
-            referrerpolicy="no-referrer"
-          ></iframe>
-        </div>
-
-        <p class="tiny muted" style="margin-top:10px;">Prototype only. Not production hosting.</p>
-      </section>
-
-      <!-- Feedback -->
-      <section class="card">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">Feedback collection</h2>
-            <p class="card-sub">Designed for quick validation. Keep it simple.</p>
-          </div>
-          <div class="card-actions">
-            <button id="btnExportFeedback" class="btn btn-ghost" type="button">Export feedback</button>
-            <button id="btnClearFeedback" class="btn btn-ghost" type="button">Clear</button>
-          </div>
-        </header>
-
-        <div class="row row-wrap">
-          <button class="chip" data-sentiment="useful" type="button">👍 Useful</button>
-          <button class="chip" data-sentiment="not_useful" type="button">👎 Not useful</button>
-        </div>
-
-        <label class="field-label" for="feedbackText">Feedback</label>
-        <textarea id="feedbackText" class="textarea"
-          placeholder="One sentence is enough. What confused you? What would you change? Would you use this?"></textarea>
-
-        <div class="row row-between">
-          <button id="btnSubmitFeedback" class="btn btn-primary" type="button">Submit feedback</button>
-          <div class="muted"><span id="feedbackSaveStatus">Saved locally</span></div>
-        </div>
-
-        <div class="subsection">
-          <h3 class="subhead">Recent feedback</h3>
-          <div id="recentFeedback" class="list"></div>
-        </div>
-      </section>
-
-      <!-- Analytics -->
-      <section class="card">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">Lightweight analytics</h2>
-            <p class="card-sub">Local first. No identity. Just actions.</p>
-          </div>
-          <div class="card-actions">
-            <button id="btnResetAnalytics" class="btn btn-ghost" type="button">Reset</button>
-          </div>
-        </header>
-
-        <div class="stats">
-          <div class="stat">
-            <div class="stat-label">Views</div>
-            <div id="statViews" class="stat-value">0</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Launches</div>
-            <div id="statLaunches" class="stat-value">0</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Feedback</div>
-            <div id="statFeedback" class="stat-value">0</div>
-          </div>
-        </div>
-
-        <div class="subsection">
-          <h3 class="subhead">How to validate fast</h3>
-          <ul class="bullets">
-            <li>Ask one question: “Would you use this?” or “What’s missing?”</li>
-            <li>Share a link with a short sentence and a screenshot.</li>
-            <li>Iterate quickly. Don’t overbuild.</li>
-          </ul>
-          <p class="tiny muted">Ethical metric policy: we measure actions, not people. No identities. No behavior profiling.</p>
-        </div>
-      </section>
-    </section>
-
-    <section class="container why">
-      <h2>Why VibeSnap exists</h2>
-      <p class="muted">
-        AI can generate code anywhere. The bottleneck is running it, sharing it, and learning from real feedback without setup.
-        VibeSnap removes that friction.
+      <h1>Preview AI-generated prototypes instantly</h1>
+      <p class="sub">
+        Generate prototypes anywhere. Validate them here. Paste or upload a single file HTML prototype, run it safely in a sandbox, then test and share.
       </p>
 
-      <div class="cta-strip">
-        <div>
-          <div class="cta-title">Generate anywhere. Validate here.</div>
-          <div class="cta-sub">Stop guessing. Start learning from real people with less setup.</div>
-        </div>
-        <div class="cta-actions">
-          <button class="btn btn-primary" type="button" data-scrolltop>Start free</button>
-          <button class="btn btn-ghost" type="button" data-nav="pricing">See pricing</button>
-        </div>
+      <div class="trust">
+        <span class="chip">Runs locally</span>
+        <span class="chip">Sandboxed preview</span>
+        <span class="chip">No cookies</span>
+        <span class="chip">No tracking pixels</span>
       </div>
+
+      <p class="privacy">
+        Your ideas stay yours. We don’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
+      </p>
     </section>
 
-    <footer class="footer">
-      <div class="container footer-inner">
-        <div class="muted">vibesnap.xyz <span class="dot">•</span> generate anywhere, validate here</div>
-      </div>
-    </footer>
-  </main>
+    <!-- Panels -->
+    <section class="panels">
 
-  <!-- PRICING PAGE -->
-  <main id="pagePricing" class="page">
-    <section class="hero hero-compact">
-      <div class="container hero-inner">
-        <div class="pricing-top">
-          <h1>Pricing that respects your time and your ideas.</h1>
-          <div class="pricing-nav">
-            <button class="btn btn-ghost" type="button" data-nav="app">Back to app</button>
-            <button class="btn btn-primary" type="button" data-nav="pricing">Pricing</button>
-          </div>
-        </div>
+      <!-- =========================
+      PANEL: Preview prototype
+      ========================= -->
+      <section id="panelPreview" class="panel is-active" role="region" aria-label="Preview prototype">
+        <div class="grid2">
+          <!-- Left: input -->
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Prototype code</div>
+                <div class="title">Paste a single file HTML prototype</div>
+                <div class="muted">Inline CSS + JS recommended. Keep it self contained for best results.</div>
+              </div>
 
-        <p class="hero-sub">
-          VibeSnap is free for exploration. Pay when you want sharing, saving, and validation signals that help you learn faster.
-        </p>
-
-        <div class="pill-row" role="list" aria-label="Product guarantees">
-          <span class="pill" role="listitem">Runs entirely in your browser</span>
-          <span class="pill" role="listitem">Sandboxed execution</span>
-          <span class="pill" role="listitem">No cookies</span>
-          <span class="pill" role="listitem">No tracking</span>
-        </div>
-
-        <p class="hero-privacy">
-          Your ideas stay yours. We don’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
-        </p>
-      </div>
-    </section>
-
-    <section class="container pricing">
-      <div class="plan-grid">
-        <!-- Free -->
-        <article class="plan">
-          <div class="plan-head">
-            <div class="plan-name">Free</div>
-            <div class="plan-tag">For exploration and throwaway ideas</div>
-          </div>
-
-          <div class="price">
-            <span class="price-main">$0</span>
-            <span class="price-sub">forever</span>
-          </div>
-
-          <button class="btn btn-primary plan-cta" type="button" data-nav="app">Start validating</button>
-
-          <ul class="plan-list">
-            <li>Paste single-file HTML prototypes</li>
-            <li>Sandboxed live preview</li>
-            <li>Local autosave</li>
-            <li>Download HTML</li>
-            <li>Prompt builder</li>
-            <li>Import helper</li>
-          </ul>
-
-          <div class="plan-foot muted">Best for quick experiments and learning loops.</div>
-        </article>
-
-        <!-- Creator -->
-        <article class="plan">
-          <div class="plan-head">
-            <div class="plan-name">Creator</div>
-            <div class="plan-tag">For people testing real ideas</div>
-          </div>
-
-          <div class="price">
-            <span class="price-main">$12</span>
-            <span class="price-sub">per month</span>
-          </div>
-
-          <button class="btn btn-primary plan-cta" type="button" data-cta="creator">Unlock sharing</button>
-
-          <ul class="plan-list">
-            <li>Shareable preview links</li>
-            <li>Feedback collection</li>
-            <li>Validation signals across devices</li>
-            <li>Cloud saves</li>
-            <li>Prototype history</li>
-            <li>Export feedback (CSV)</li>
-          </ul>
-
-          <div class="plan-foot muted">Best for designers and builders validating weekly.</div>
-        </article>
-
-        <!-- Lifetime -->
-        <article class="plan plan-lifetime">
-          <div class="plan-head">
-            <div class="plan-name">
-              Lifetime
-              <span class="badge badge-lifetime" title="Lifetime access">Lifetime</span>
+              <div class="actions">
+                <button class="btn ghost" id="btnPasteStarter" type="button">Paste starter</button>
+                <button class="btn ghost" id="btnDownloadHtml" type="button">Download HTML</button>
+                <button class="btn ghost" id="btnClearEditor" type="button">Clear</button>
+              </div>
             </div>
-            <div class="plan-tag">For early supporters who validate constantly</div>
+
+            <label class="sr" for="codeInput">Prototype HTML</label>
+            <textarea id="codeInput" class="codearea" spellcheck="false" placeholder="Paste your single file HTML here…"></textarea>
+
+            <div class="row">
+              <button class="btn primary" id="btnLaunch" type="button">
+                <span class="btn-label">Launch preview</span>
+                <span class="spinner" aria-hidden="true"></span>
+              </button>
+
+              <div class="status">
+                <span id="saveStatus" class="muted">Nothing saved</span>
+                <button class="linkbtn" id="btnClearSaved" type="button">Clear saved</button>
+              </div>
+            </div>
+
+            <div class="sectionline"></div>
+
+            <div class="kicker">Share + validate</div>
+            <div class="muted">Create a share link that opens this prototype on this device. (Backend sharing comes later.)</div>
+
+            <div class="row shareRow">
+              <button class="btn" id="btnCreateShare" type="button">Create share link</button>
+              <button class="btn" id="btnOpenNewTab" type="button">Open preview in new tab</button>
+            </div>
+
+            <div class="shareBox">
+              <label class="small muted" for="shareLink">Share link</label>
+              <div class="shareInputRow">
+                <input id="shareLink" type="text" readonly value="" placeholder="Create a link…" />
+                <button class="btn" id="btnCopyShare" type="button">Copy</button>
+              </div>
+              <div class="muted tiny">
+                Tip: post a screenshot + one question (e.g., “Would you use this?”) and link the preview.
+              </div>
+
+              <div class="row shareTextRow">
+                <button class="btn ghost" id="btnCopyShareText" type="button">Copy share text</button>
+                <button class="btn ghost" id="btnResetShare" type="button">Reset link</button>
+              </div>
+            </div>
+
+            <div class="sectionline"></div>
+
+            <div class="kicker">Safety note</div>
+            <div class="muted tiny">
+              This preview runs inside a sandboxed iframe. It can’t read your parent page.
+              If your prototype loads external scripts/assets, they may be blocked depending on the browser.
+            </div>
           </div>
 
-          <div class="price">
-            <span class="price-main">$149</span>
-            <span class="price-sub">one time</span>
+          <!-- Right: preview -->
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Live preview</div>
+                <div class="muted">Your prototype runs here. Use Reload if it gets stuck.</div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" id="btnReloadPreview" type="button">Reload</button>
+              </div>
+            </div>
+
+            <div class="previewFrameWrap" aria-label="Sandbox preview">
+              <iframe
+                id="previewFrame"
+                title="Prototype preview"
+                sandbox="allow-scripts allow-forms allow-modals"
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+
+            <div class="muted tiny" style="margin-top:10px;">
+              Prototype only. Not production hosting.
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom row -->
+        <div class="grid2 bottom">
+          <!-- Feedback -->
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Feedback collection</div>
+                <div class="muted">Designed for quick validation. Keep it simple.</div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" id="btnExportFeedback" type="button">Export feedback</button>
+                <button class="btn ghost" id="btnClearFeedback" type="button">Clear</button>
+              </div>
+            </div>
+
+            <div class="toggleRow" role="group" aria-label="Quick rating">
+              <label class="toggle">
+                <input type="radio" name="rating" value="useful" />
+                <span>👍 Useful</span>
+              </label>
+              <label class="toggle">
+                <input type="radio" name="rating" value="not_useful" />
+                <span>👎 Not useful</span>
+              </label>
+            </div>
+
+            <label class="sr" for="feedbackText">Feedback</label>
+            <textarea id="feedbackText" class="textarea" placeholder="One sentence is enough. What confused you? What would you change? Would you use this?"></textarea>
+
+            <div class="row">
+              <button class="btn primary" id="btnSubmitFeedback" type="button">Submit feedback</button>
+              <div class="muted tiny" id="feedbackSaveNote">Saved locally</div>
+            </div>
+
+            <div class="sectionline"></div>
+
+            <div class="kicker">Recent feedback</div>
+            <div id="feedbackList" class="feedList" aria-live="polite"></div>
           </div>
 
-          <button class="btn btn-primary plan-cta" type="button" data-cta="lifetime">Get lifetime access</button>
+          <!-- Analytics -->
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Lightweight analytics</div>
+                <div class="muted">Local first. No identity. Just actions.</div>
+              </div>
+              <div class="actions">
+                <button class="btn ghost" id="btnResetAnalytics" type="button">Reset</button>
+              </div>
+            </div>
 
-          <ul class="plan-list">
-            <li>Everything in Creator</li>
-            <li>Unlimited saves, shares, and feedback</li>
-            <li>Priority sharing performance</li>
-            <li>Higher share size limits</li>
-            <li>Export everything anytime</li>
-            <li>Roadmap voting</li>
-          </ul>
+            <div class="metrics">
+              <div class="metric">
+                <div class="muted tiny">Views</div>
+                <div class="metricNum" id="mViews">0</div>
+              </div>
+              <div class="metric">
+                <div class="muted tiny">Launches</div>
+                <div class="metricNum" id="mLaunches">0</div>
+              </div>
+              <div class="metric">
+                <div class="muted tiny">Feedback</div>
+                <div class="metricNum" id="mFeedback">0</div>
+              </div>
+            </div>
 
-          <div class="plan-foot muted">Best for founders, indie hackers, and heavy testers.</div>
-        </article>
-      </div>
+            <div class="sectionline"></div>
 
-      <!-- Upsell strip -->
-      <section class="upsell">
-        <div class="upsell-left">
-          <div class="upsell-label">Early access special</div>
-          <h3>Own VibeSnap forever. No subscriptions.</h3>
+            <div class="kicker">How to validate fast</div>
+            <ul class="bullets">
+              <li>Ask one question: “Would you use this?” or “What’s missing?”</li>
+              <li>Share a link with a short sentence and a screenshot.</li>
+              <li>Iterate quickly. Don’t overbuild.</li>
+            </ul>
+
+            <div class="muted tiny" style="margin-top:10px;">
+              Ethical metric policy: we measure actions, not people.
+            </div>
+          </div>
+        </div>
+
+        <section class="why">
+          <h2>Why VibeSnap exists</h2>
           <p class="muted">
-            Lifetime is for early supporters. One payment unlocks unlimited sharing, saving, and validation signals.
+            Starting is not the problem anymore. AI can generate code anywhere, but most builders still require setup, tokens, or a hosting step before you can show anything real. The bottleneck is running it, sharing it, and learning from feedback fast. VibeSnap removes that friction.
           </p>
-          <div class="upsell-chips">
-            <span class="mini-pill">Lifetime badge</span>
-            <span class="mini-pill">Priority sharing</span>
-            <span class="mini-pill">Export everything</span>
+          <div class="ctaStrip">
+            <div class="ctaText">
+              <div class="ctaTitle">Paste code. Launch instantly. Test and share.</div>
+              <div class="muted tiny">No signups required for local previews.</div>
+            </div>
+            <a class="btn primary" href="pricing.html">See pricing</a>
+          </div>
+        </section>
+      </section>
+
+      <!-- =========================
+      PANEL: Prompt builder
+      ========================= -->
+      <section id="panelPrompt" class="panel" role="region" aria-label="Prompt builder">
+        <div class="card">
+          <div class="cardhead">
+            <div>
+              <div class="kicker">Prompt builder</div>
+              <div class="title">Generate a prototype-ready prompt for any AI tool</div>
+              <div class="muted">Fill this out, copy the prompt, paste into ChatGPT, Claude, Gemini, or your favorite model. Ask for a single HTML file output.</div>
+            </div>
+            <div class="actions">
+              <button class="btn" id="btnCopyPrompt" type="button">Copy prompt</button>
+              <button class="btn ghost" id="btnResetPrompt" type="button">Reset</button>
+            </div>
+          </div>
+
+          <div class="formGrid">
+            <div class="field">
+              <label for="pbIdea">What are you trying to test?</label>
+              <input id="pbIdea" type="text" placeholder="Example: spending tracker for roommates" />
+            </div>
+
+            <div class="field">
+              <label for="pbAudience">Who is it for?</label>
+              <input id="pbAudience" type="text" placeholder="Example: people splitting bills" />
+            </div>
+
+            <div class="field">
+              <label for="pbGoal">Primary goal</label>
+              <input id="pbGoal" type="text" placeholder="Example: log expenses fast and see totals" />
+            </div>
+
+            <div class="field">
+              <label for="pbScreens">Key screens (comma separated)</label>
+              <input id="pbScreens" type="text" placeholder="Dashboard, Add expense, History" />
+            </div>
+
+            <div class="field">
+              <label for="pbInteractions">Must have interactions</label>
+              <input id="pbInteractions" type="text" placeholder="Add item, edit, delete, totals update" />
+            </div>
+
+            <div class="field">
+              <label for="pbData">Data to store</label>
+              <input id="pbData" type="text" placeholder="amount, category, note, date" />
+            </div>
+
+            <div class="field">
+              <label for="pbStyle">Style</label>
+              <select id="pbStyle">
+                <option value="dark-modern">Clean modern (dark mode friendly)</option>
+                <option value="light-clean">Clean light</option>
+                <option value="playful">Playful</option>
+                <option value="minimal">Ultra minimal</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="pbNotes">Extra notes (optional)</label>
+              <input id="pbNotes" type="text" placeholder="Example: include realistic empty states" />
+            </div>
+          </div>
+
+          <div class="sectionline"></div>
+
+          <div class="kicker">Generated prompt</div>
+          <textarea id="promptOut" class="codearea" spellcheck="false" readonly></textarea>
+
+          <div class="muted tiny" style="margin-top:10px;">
+            Tip: ask for a <b>single self contained HTML file</b> with inline CSS and JS, no external libraries, and a tiny “prototype” label.
           </div>
         </div>
-        <div class="upsell-right">
-          <div class="upsell-price">$149 <span class="muted tiny">one time</span></div>
-          <button class="btn btn-primary" type="button" data-cta="lifetime">Get lifetime access</button>
-          <div class="tiny muted" style="margin-top:8px;">Available only during early access.</div>
-        </div>
       </section>
 
-      <!-- Compare -->
-      <section class="card compare">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">Compare plans</h2>
-            <p class="card-sub">Free stays useful. Paid unlocks sharing, saving, and real learning loops.</p>
+      <!-- =========================
+      PANEL: Import helper
+      ========================= -->
+      <section id="panelImport" class="panel" role="region" aria-label="Import helper">
+        <div class="grid2">
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Import helper</div>
+                <div class="title">Turn “separate files” into one pasteable HTML</div>
+                <div class="muted">If an AI gives you HTML + CSS + JS separately, combine them here.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnAssemble" type="button">Assemble</button>
+                <button class="btn ghost" id="btnAssembleToEditor" type="button">Assemble → Editor</button>
+                <button class="btn ghost" id="btnImportClear" type="button">Clear</button>
+              </div>
+            </div>
+            <div class="importStates" aria-label="Import status">
+              <div class="importHint">
+                <div class="kicker">Preferred</div>
+                <div class="muted">Drop a single HTML file with inline CSS and JS. Fastest path.</div>
+              </div>
+
+              <div class="importRows" role="group" aria-label="File uploads">
+                <div class="importRow" id="rowInline">
+                  <span class="rowLabel">Inline HTML</span>
+                  <span class="rowState muted" id="stateInline">Drop a single file to detect inline CSS and JS</span>
+                </div>
+                <div class="importRow">
+                  <span class="rowLabel">HTML</span>
+                  <span class="rowState muted" id="stateHtml">Upload HTML file or paste below</span>
+                </div>
+                <div class="importRow">
+                  <span class="rowLabel">CSS</span>
+                  <span class="rowState muted" id="stateCss">Optional. Upload CSS file or paste below</span>
+                </div>
+                <div class="importRow">
+                  <span class="rowLabel">JavaScript</span>
+                  <span class="rowState muted" id="stateJs">Optional. Upload JS file or paste below</span>
+                </div>
+              </div>
+
+              <div class="dropMini" id="dropMini" aria-label="Drop files here">
+                <div class="muted">Drop HTML, CSS, or JS files here</div>
+                <div class="muted tiny">You can still paste split code below</div>
+              </div>
+            </div>
+
+            <div class="sectionline"></div>
+<div class="field">
+              <label for="impHtml">HTML (body markup is fine)</label>
+              <textarea id="impHtml" class="textarea" spellcheck="false" placeholder="<div>...</div>"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="impCss">CSS</label>
+              <textarea id="impCss" class="textarea" spellcheck="false" placeholder="body { ... }"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="impJs">JS</label>
+              <textarea id="impJs" class="textarea" spellcheck="false" placeholder="document.querySelector(...)"></textarea>
+            </div>
           </div>
-        </header>
 
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Feature</th>
-                <th>Free</th>
-                <th>Creator</th>
-                <th>Lifetime</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Paste and run prototypes</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Sandboxed live preview</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Local autosave</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Shareable preview links</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Feedback collection</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Cloud saves</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Export feedback</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Priority sharing performance</td><td>—</td><td>—</td><td>✓</td></tr>
-              <tr><td>Higher share size limits</td><td>—</td><td>—</td><td>✓</td></tr>
-              <tr><td>Roadmap voting</td><td>—</td><td>—</td><td>✓</td></tr>
-            </tbody>
-          </table>
-        </div>
+          <div class="card">
+            <div class="cardhead">
+              <div>
+                <div class="kicker">Output</div>
+                <div class="title">Single file HTML</div>
+                <div class="muted">Copy this into the Preview tab and launch.</div>
+              </div>
+              <div class="actions">
+                <button class="btn" id="btnCopyAssembled" type="button">Copy</button>
+                <button class="btn ghost" id="btnDownloadAssembled" type="button">Download</button>
+              </div>
+            </div>
 
-        <p class="tiny muted" style="margin-top:10px;">
-          Privacy note: we track actions, not people. No identities. No behavior profiling.
-        </p>
-      </section>
+            <textarea id="assembledOut" class="codearea" spellcheck="false" readonly placeholder="Assembled HTML will appear here…"></textarea>
 
-      <!-- FAQ -->
-      <section class="card faq">
-        <header class="card-head">
-          <div>
-            <h2 class="card-title">FAQ</h2>
-            <p class="card-sub">Clear answers. No fine print energy.</p>
+            <div class="muted tiny" style="margin-top:10px;">
+              Note: external assets may be blocked in the sandbox. If your prototype depends on external libraries, try asking the AI for “no external libraries”.
+            </div>
           </div>
-        </header>
-
-        <div class="accordion">
-          <details open>
-            <summary>Why is VibeSnap not free forever?</summary>
-            <div class="acc-body">
-              Running prototypes safely is easy. Sharing, saving, and collecting feedback reliably costs real infrastructure.
-              Free lets you explore. Paid unlocks learning from real people.
-            </div>
-          </details>
-
-          <details>
-            <summary>Why not just use CodePen or Replit?</summary>
-            <div class="acc-body">
-              You can. VibeSnap is optimized for validation: paste → sandbox → share → collect feedback → export.
-              It’s a fast lane for testing ideas, not a full dev environment.
-            </div>
-          </details>
-
-          <details>
-            <summary>Do you use AI?</summary>
-            <div class="acc-body">
-              VibeSnap doesn’t generate code for you. It helps you run and validate code you generate anywhere.
-              Starting needs clarity, not generation.
-            </div>
-          </details>
-
-          <details>
-            <summary>What do Lifetime buyers get besides access?</summary>
-            <div class="acc-body">
-              Lifetime includes a visible Lifetime badge, priority sharing performance, higher share limits, and roadmap voting.
-              If accounts are added later, Lifetime holders keep their badge and perks.
-            </div>
-          </details>
-
-          <details>
-            <summary>Can I cancel?</summary>
-            <div class="acc-body">
-              Creator is monthly and can be cancelled anytime. Lifetime is a one-time purchase.
-            </div>
-          </details>
         </div>
       </section>
 
-      <section class="cta-strip cta-strip-pricing">
-        <div>
-          <div class="cta-title">Generate anywhere. Validate here.</div>
-          <div class="cta-sub">Stop guessing. Start learning from real people with less setup.</div>
-        </div>
-        <div class="cta-actions">
-          <button class="btn btn-primary" type="button" data-nav="app">Start free</button>
-          <button class="btn btn-ghost" type="button" data-cta="lifetime">Get lifetime access</button>
-        </div>
-        <div class="tiny muted" style="margin-top:10px;">
-          Your ideas stay yours. We don’t train on them, sell them, or inspect them.
-        </div>
-      </section>
     </section>
 
-    <footer class="footer">
-      <div class="container footer-inner">
-        <div class="muted">vibesnap.xyz <span class="dot">•</span> generate anywhere, validate here</div>
-      </div>
+    <footer class="foot">
+      <span>vibesnap.xyz</span>
+      <span class="dot">•</span>
+      <span>generate anywhere, validate here</span>
     </footer>
   </main>
-
-  <!-- Toast -->
-  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="app.js"></script>
 </body>
