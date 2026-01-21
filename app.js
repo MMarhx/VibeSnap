@@ -1,773 +1,574 @@
-/* =========================================================
-   VibeSnap — app.js
-   Static, privacy-first prototype runner + sharing + feedback + local analytics
-   Works on a single static HTML file. No external libs.
-   ========================================================= */
+/* VibeSnap — app.js
+   Local-first prototype runner with prompt builder + import helper.
+   No analytics, no external calls. */
 
 (() => {
-  "use strict";
+  'use strict';
 
-  // -----------------------------
-  // LocalStorage keys
-  // -----------------------------
-  const LS = {
-    DRAFT_HTML: "vibesnap:draft_html",
-    METRICS: "vibesnap:metrics",
-    FEEDBACK: "vibesnap:feedback",
-    SHARE_TOKEN: "vibesnap:share_token",
+  const $ = (id) => document.getElementById(id);
+  const qs = (sel, root=document) => root.querySelector(sel);
+  const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const safeText = (s) => (s == null ? '' : String(s));
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  // ---------- Tabs ----------
+  const nav = {
+    preview: $('navPreview'),
+    prompt: $('navPrompt'),
+    import: $('navImport'),
+  };
+  const panels = {
+    preview: $('panelPreview'),
+    prompt: $('panelPrompt'),
+    import: $('panelImport'),
   };
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-  function safeJsonParse(str, fallback) {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return fallback;
-    }
+  function setActiveTab(key) {
+    const keys = ['preview','prompt','import'];
+    keys.forEach(k => {
+      const btn = nav[k];
+      const panel = panels[k];
+      if (btn) btn.classList.toggle('is-active', k === key);
+      if (btn) btn.setAttribute('aria-selected', k === key ? 'true' : 'false');
+      if (panel) panel.hidden = (k !== key);
+    });
+    // Update hash for shareable navigation only (not prototype content)
+    try { history.replaceState(null, '', `#${key}`); } catch {}
   }
 
-  function nowISO() {
-    return new Date().toISOString();
+  function initTabs() {
+    const clickMap = [
+      ['preview', nav.preview],
+      ['prompt', nav.prompt],
+      ['import', nav.import],
+    ];
+    clickMap.forEach(([k, btn]) => {
+      if (!btn) return;
+      btn.addEventListener('click', () => setActiveTab(k));
+    });
+
+    // initial
+    const hash = (location.hash || '').replace('#','').trim().toLowerCase();
+    if (hash === 'prompt' || hash === 'import' || hash === 'preview') setActiveTab(hash);
+    else setActiveTab('preview');
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  // ---------- Preview runner ----------
+  const codeInput = $('codeInput');
+  const previewFrame = $('previewFrame');
+  const btnRun = $('btnRun');
+  const btnSample = $('btnSample');
+  const btnSave = $('btnSave');
+  const saveStatus = $('saveStatus');
+  const btnOpenFeedback = $('btnOpenFeedback');
+  const btnCreateShare = $('btnCreateShare');
+  const shareLink = $('shareLink');
+  const btnCopyShare = $('btnCopyShare');
+  const shareText = $('shareText');
+  const btnCopyShareText = $('btnCopyShareText');
+
+  const LS_KEY = 'vibesnap:last_code_v1';
+
+  function setSaveStatus(msg) {
+    if (!saveStatus) return;
+    saveStatus.textContent = msg;
+    saveStatus.classList.add('is-live');
+    window.setTimeout(() => saveStatus.classList.remove('is-live'), 800);
   }
 
-  function downloadText(filename, text, mime = "text/plain") {
-    const blob = new Blob([text], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  function getCurrentCode() {
+    return safeText(codeInput ? codeInput.value : '');
   }
 
-  function randomDelay() {
-    return 520 + Math.floor(Math.random() * 520); // ~0.5–1.0s
+  function setCurrentCode(html) {
+    if (!codeInput) return;
+    codeInput.value = safeText(html);
   }
 
-  function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
+  function runInFrame(html) {
+    if (!previewFrame) return;
+    // Use srcdoc for safety; frame should be sandboxed in HTML.
+    previewFrame.srcdoc = safeText(html);
   }
 
-  // Base64 UTF-8
-  function b64EncodeUtf8(str) {
-    const bytes = new TextEncoder().encode(str);
-    let bin = "";
-    bytes.forEach((b) => (bin += String.fromCharCode(b)));
-    return btoa(bin);
+  function sampleHTML() {
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSnap sample</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:24px;background:#0b0f14;color:#e8eef7}
+    .card{max-width:720px;margin:0 auto;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.06)}
+    button{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#e8eef7;cursor:pointer}
+    button:hover{background:rgba(255,255,255,.12)}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 style="margin:0 0 8px 0;font-size:20px">Sample prototype</h1>
+    <p style="margin:0 0 12px 0;opacity:.9">Edit this HTML, then hit <b>Run</b> in VibeSnap.</p>
+    <button id="b">Click me</button>
+    <p id="out" style="margin:12px 0 0 0;opacity:.9"></p>
+  </div>
+  <script>
+    const b=document.getElementById('b');
+    const out=document.getElementById('out');
+    let n=0;
+    b.addEventListener('click',()=>{ n++; out.textContent='Clicks: '+n; });
+  </script>
+</body>
+</html>`;
   }
 
-  function b64DecodeUtf8(b64) {
+  // ---------- Share via URL fragment (client-only) ----------
+  // Not meant for large prototypes. Keeps it lightweight + private.
+  function encodeForHash(s) {
+    // compress-ish using URI-safe base64
+    const utf8 = new TextEncoder().encode(s);
+    let bin = '';
+    utf8.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decodeFromHash(s) {
+    const pad = s.length % 4 ? '='.repeat(4 - (s.length % 4)) : '';
+    const b64 = (s + pad).replace(/-/g,'+').replace(/_/g,'/');
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
     return new TextDecoder().decode(bytes);
   }
 
-  async function copyToClipboard(text) {
+  function buildShareUrl(html) {
+    const max = 120000; // keep URLs sane
+    if (html.length > max) return null;
+    const payload = encodeForHash(html);
+    const base = `${location.origin}${location.pathname}`;
+    return `${base}#p=${payload}`;
+  }
+
+  function tryLoadSharedPrototype() {
+    const h = location.hash || '';
+    const m = h.match(/#p=([A-Za-z0-9\-_]+)/);
+    if (!m) return false;
     try {
-      await navigator.clipboard.writeText(text);
+      const html = decodeFromHash(m[1]);
+      if (html && html.includes('<')) {
+        setCurrentCode(html);
+        runInFrame(html);
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  // ---------- Feedback (local only) ----------
+  const modal = $('modalFeedback');
+  const feedbackText = $('feedbackText');
+  const feedbackList = $('feedbackList');
+  const feedbackSaveNote = $('feedbackSaveNote');
+  const btnSubmitFeedback = $('btnSubmitFeedback');
+  const btnClearFeedback = $('btnClearFeedback');
+  const btnExportFeedback = $('btnExportFeedback');
+
+  const FEED_KEY = 'vibesnap:feedback_v1';
+  function readFeedback() {
+    try { return JSON.parse(localStorage.getItem(FEED_KEY) || '[]'); } catch { return []; }
+  }
+  function writeFeedback(items) {
+    try { localStorage.setItem(FEED_KEY, JSON.stringify(items)); } catch {}
+  }
+  function renderFeedback() {
+    if (!feedbackList) return;
+    const items = readFeedback();
+    feedbackList.innerHTML = '';
+    if (!items.length) {
+      feedbackList.innerHTML = `<div class="empty">No feedback yet.</div>`;
+      return;
+    }
+    items.slice().reverse().forEach(it => {
+      const div = document.createElement('div');
+      div.className = 'fb';
+      div.innerHTML = `
+        <div class="fb-meta">${new Date(it.ts).toLocaleString()}</div>
+        <div class="fb-text"></div>
+      `;
+      div.querySelector('.fb-text').textContent = it.text;
+      feedbackList.appendChild(div);
+    });
+  }
+  function openModal() {
+    if (!modal) return;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden','false');
+    renderFeedback();
+    if (feedbackText) feedbackText.focus();
+  }
+  function closeModal() {
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden','true');
+  }
+
+  // ---------- Import helper ----------
+  const importDrop = $('importDrop');
+  const fileInline = $('fileInline');
+  const fileHtml = $('fileHtml');
+  const fileCss = $('fileCss');
+  const fileJs = $('fileJs');
+  const stateInline = $('stateInline');
+  const stateHtml = $('stateHtml');
+  const stateCss = $('stateCss');
+  const stateJs = $('stateJs');
+  const importNotice = $('importNotice');
+  const assembledOut = $('assembledOut');
+  const btnAssemble = $('btnAssemble');
+  const btnRunImport = $('btnRunImport');
+  const rowInline = $('rowInline');
+
+  const fileState = {
+    inline: null,
+    html: null,
+    css: null,
+    js: null,
+  };
+
+  function setBadge(el, ok, labelOk, labelMissing) {
+    if (!el) return;
+    el.classList.toggle('ok', !!ok);
+    el.classList.toggle('missing', !ok);
+    el.textContent = ok ? labelOk : labelMissing;
+  }
+
+  function toast(msg) {
+    if (!importNotice) return;
+    importNotice.textContent = msg;
+    importNotice.classList.add('show');
+    window.setTimeout(() => importNotice.classList.remove('show'), 1600);
+  }
+
+  async function readFileText(file) {
+    return await file.text();
+  }
+
+  function updateImportUI() {
+    setBadge(stateInline, !!fileState.inline, 'Inline HTML ✓', 'Inline HTML');
+    setBadge(stateHtml, !!fileState.html, 'HTML ✓', 'HTML');
+    setBadge(stateCss, !!fileState.css, 'CSS ✓', 'CSS');
+    setBadge(stateJs, !!fileState.js, 'JS ✓', 'JS');
+
+    // If inline provided, treat split as optional.
+    const canAssemble = !!fileState.inline || !!fileState.html;
+    if (btnAssemble) btnAssemble.disabled = !canAssemble;
+    if (btnRunImport) btnRunImport.disabled = !canAssemble;
+
+    if (rowInline) rowInline.classList.toggle('has-file', !!fileState.inline);
+  }
+
+  async function handleFiles(files) {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+
+    // If user drops one HTML file, prefer inline.
+    for (const f of list) {
+      const name = f.name.toLowerCase();
+      if (name.endsWith('.html') || name.endsWith('.htm')) {
+        // If there are multiple files, treat as split if we already have HTML and not inline
+        // but simplest: if only one html and no css/js => inline
+        if (list.length === 1 || (!list.some(x => x.name.toLowerCase().endsWith('.css') || x.name.toLowerCase().endsWith('.js')))) {
+          fileState.inline = await readFileText(f);
+          toast('HTML file uploaded');
+          continue;
+        } else {
+          fileState.html = await readFileText(f);
+          toast('HTML file uploaded');
+          continue;
+        }
+      }
+      if (name.endsWith('.css')) { fileState.css = await readFileText(f); toast('CSS file uploaded'); continue; }
+      if (name.endsWith('.js')) { fileState.js = await readFileText(f); toast('JS file uploaded'); continue; }
+      // ignore others
+    }
+    updateImportUI();
+  }
+
+  function assembleFromSplit(html, css, js) {
+    let out = safeText(html);
+    const hasHead = /<\/head\s*>/i.test(out);
+    const hasBodyClose = /<\/body\s*>/i.test(out);
+
+    const styleTag = css ? `\n<style>\n${css}\n</style>\n` : '';
+    const scriptTag = js ? `\n<script>\n${js}\n<\/script>\n` : '';
+
+    if (styleTag) {
+      if (hasHead) out = out.replace(/<\/head\s*>/i, styleTag + '</head>');
+      else out = out.replace(/<html[^>]*>/i, m => m + '\n<head>' + styleTag + '</head>\n');
+    }
+    if (scriptTag) {
+      if (hasBodyClose) out = out.replace(/<\/body\s*>/i, scriptTag + '</body>');
+      else out = out + scriptTag;
+    }
+    return out;
+  }
+
+  function assemble() {
+    const inline = fileState.inline;
+    const html = fileState.html;
+    const css = fileState.css;
+    const js = fileState.js;
+
+    let result = '';
+    if (inline) {
+      result = inline;
+    } else if (html) {
+      result = assembleFromSplit(html, css, js);
+    } else {
+      result = '';
+    }
+
+    if (assembledOut) assembledOut.value = result;
+    return result;
+  }
+
+  // ---------- Prompt builder ----------
+  const pbIdea = $('pbIdea');
+  const pbGoal = $('pbGoal');
+  const pbScreens = $('pbScreens');
+  const pbInteractions = $('pbInteractions');
+  const pbStyle = $('pbStyle');
+  const pbNotes = $('pbNotes');
+  const promptOut = $('promptOut');
+  const btnCopyPrompt = $('btnCopyPrompt');
+
+  function buildPrompt() {
+    const idea = safeText(pbIdea && pbIdea.value).trim();
+    const goal = safeText(pbGoal && pbGoal.value).trim();
+    const screens = safeText(pbScreens && pbScreens.value).trim();
+    const interactions = safeText(pbInteractions && pbInteractions.value).trim();
+    const style = safeText(pbStyle && pbStyle.value).trim();
+    const notes = safeText(pbNotes && pbNotes.value).trim();
+
+    const lines = [];
+    lines.push("Make a single self-contained HTML file that includes:");
+    lines.push("- Inline CSS in a <style> tag");
+    lines.push("- Inline JavaScript in a <script> tag");
+    lines.push("- No external libraries");
+    lines.push("- No external assets");
+    lines.push("- No build steps");
+    lines.push("- Works by opening the HTML file directly");
+    lines.push("");
+    if (idea) lines.push(`App concept: ${idea}`);
+    if (goal) lines.push(`Primary goal: ${goal}`);
+    if (screens) lines.push(`Key screens: ${screens}`);
+    if (interactions) lines.push(`Must-have interaction: ${interactions}`);
+    if (style) lines.push(`Design / tone: ${style}`);
+    if (notes) lines.push(`Notes / constraints: ${notes}`);
+    lines.push("");
+    lines.push("Output ONLY the full HTML code. Do not include explanations.");
+
+    return lines.join('\n');
+  }
+
+  function updatePromptOut() {
+    if (!promptOut) return;
+    promptOut.value = buildPrompt();
+  }
+
+  async function copyToClipboard(text) {
+    const t = safeText(text);
+    try {
+      await navigator.clipboard.writeText(t);
       return true;
     } catch {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
+      // fallback
       try {
-        document.execCommand("copy");
+        const ta = document.createElement('textarea');
+        ta.value = t;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
         ta.remove();
         return true;
       } catch {
-        ta.remove();
         return false;
       }
     }
   }
 
-  // -----------------------------
-  // Toast
-  // -----------------------------
-  const toastEl = $("#toast");
-  let toastT = null;
-
-  function toast(msg, ms = 2200) {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    if (toastT) clearTimeout(toastT);
-    toastT = setTimeout(() => toastEl.classList.remove("show"), ms);
-  }
-
-  // -----------------------------
-  // Metrics (local-only)
-  // -----------------------------
-  function getMetrics() {
-    return safeJsonParse(localStorage.getItem(LS.METRICS), {
-      views: 0,
-      launches: 0,
-      feedback: 0,
-      firstSeenAt: nowISO(),
-      lastSeenAt: nowISO(),
-    });
-  }
-
-  function setMetrics(m) {
-    localStorage.setItem(LS.METRICS, JSON.stringify(m));
-  }
-
-  function bumpMetric(key) {
-    const m = getMetrics();
-    m[key] = (m[key] || 0) + 1;
-    m.lastSeenAt = nowISO();
-    setMetrics(m);
-    renderMetrics();
-    return m;
-  }
-
-  // -----------------------------
-  // Feedback (local-only)
-  // -----------------------------
-  function getFeedback() {
-    return safeJsonParse(localStorage.getItem(LS.FEEDBACK), []);
-  }
-
-  function setFeedback(list) {
-    localStorage.setItem(LS.FEEDBACK, JSON.stringify(list));
-  }
-
-  // -----------------------------
-  // DOM refs (APP)
-  // -----------------------------
-  const pageApp = $("#pageApp");
-  const pagePricing = $("#pagePricing");
-
-  const navTabs = $$(".tab");
-  const navBtns = $$("[data-nav]");
-  const brand = $(".brand");
-
-  const codeInput = $("#codeInput");
-  const previewFrame = $("#previewFrame");
-
-  const btnPasteStarter = $("#btnPasteStarter");
-  const btnDownloadHtml = $("#btnDownloadHtml");
-  const btnClearCode = $("#btnClearCode");
-  const btnLaunch = $("#btnLaunch");
-  const btnReload = $("#btnReload");
-
-  const saveStatus = $("#saveStatus");
-  const btnClearSaved = $("#btnClearSaved");
-
-  const btnCreateShare = $("#btnCreateShare");
-  const btnOpenNewTab = $("#btnOpenNewTab");
-  const shareLink = $("#shareLink");
-  const btnCopyShareLink = $("#btnCopyShareLink");
-  const btnCopyShareText = $("#btnCopyShareText");
-  const btnResetLink = $("#btnResetLink");
-
-  const chips = $$(".chip");
-  const feedbackText = $("#feedbackText");
-  const btnSubmitFeedback = $("#btnSubmitFeedback");
-  const btnExportFeedback = $("#btnExportFeedback");
-  const btnClearFeedback = $("#btnClearFeedback");
-  const recentFeedback = $("#recentFeedback");
-  const feedbackSaveStatus = $("#feedbackSaveStatus");
-
-  const statViews = $("#statViews");
-  const statLaunches = $("#statLaunches");
-  const statFeedback = $("#statFeedback");
-  const btnResetAnalytics = $("#btnResetAnalytics");
-
-  // -----------------------------
-  // Navigation (App <-> Pricing)
-  // -----------------------------
-  function setActivePage(which) {
-    const onApp = which === "app";
-    if (pageApp) pageApp.classList.toggle("page-active", onApp);
-    if (pagePricing) pagePricing.classList.toggle("page-active", !onApp);
-
-    // Highlight "Pricing" tab if on pricing
-    navTabs.forEach((t) => {
-      const isPricingBtn = t.matches('[data-nav="pricing"]');
-      if (isPricingBtn) t.classList.toggle("is-active", !onApp);
+  // ---------- Wire up ----------
+  function initPreview() {
+    if (btnSample) btnSample.addEventListener('click', () => {
+      setCurrentCode(sampleHTML());
+      setSaveStatus('Sample loaded');
+      runInFrame(getCurrentCode());
     });
 
-    // If switching to app, make preview tab active by default
-    if (onApp) setActiveTab("preview");
+    if (btnRun) btnRun.addEventListener('click', () => runInFrame(getCurrentCode()));
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function setActiveTab(tabKey) {
-    // Only preview exists as a real tab right now.
-    // Prompt/import tabs are "Coming soon" placeholders to avoid broken UX.
-    navTabs.forEach((t) => {
-      const key = t.getAttribute("data-tab");
-      const is = key === tabKey;
-      if (key) t.classList.toggle("is-active", is);
-    });
-  }
-
-  function bindNav() {
-    // Brand click → app
-    if (brand) {
-      brand.addEventListener("click", () => setActivePage("app"));
-      brand.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          setActivePage("app");
-        }
-      });
-    }
-
-    // data-nav buttons
-    navBtns.forEach((b) => {
-      b.addEventListener("click", () => {
-        const dest = b.getAttribute("data-nav");
-        if (dest === "pricing") setActivePage("pricing");
-        else setActivePage("app");
-      });
-    });
-
-    // tab buttons
-    navTabs.forEach((t) => {
-      t.addEventListener("click", () => {
-        const key = t.getAttribute("data-tab");
-        const nav = t.getAttribute("data-nav");
-
-        if (nav === "pricing") {
-          setActivePage("pricing");
-          return;
-        }
-
-        if (key === "preview") {
-          setActivePage("app");
-          setActiveTab("preview");
-          return;
-        }
-
-        if (key === "prompt" || key === "import") {
-          setActivePage("app");
-          setActiveTab("preview");
-          toast("Prompt builder + import helper are next. Preview works now.");
-          return;
-        }
-      });
-    });
-
-    // CTA buttons
-    $$("[data-scrolltop]").forEach((b) => {
-      b.addEventListener("click", () => {
-        setActivePage("app");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    });
-
-    // Pricing CTAs (not wired yet)
-    $$("[data-cta]").forEach((b) => {
-      b.addEventListener("click", () => {
-        toast("Checkout isn’t wired yet. This is a prototype.");
-      });
-    });
-  }
-
-  // -----------------------------
-  // Autosave (local)
-  // -----------------------------
-  function setSaveStatus(text) {
-    if (saveStatus) saveStatus.textContent = text || "";
-  }
-
-  function saveDraft(html) {
-    localStorage.setItem(LS.DRAFT_HTML, html);
-    setSaveStatus("Saved locally");
-  }
-
-  function loadDraft() {
-    return localStorage.getItem(LS.DRAFT_HTML) || "";
-  }
-
-  function clearDraft() {
-    localStorage.removeItem(LS.DRAFT_HTML);
-    setSaveStatus("Nothing saved");
-  }
-
-  function bindAutosave() {
-    if (!codeInput) return;
-
-    // Load draft unless share hash provides content
-    const shared = readShareHash();
-    if (shared && typeof shared.html === "string") {
-      codeInput.value = shared.html;
-      saveDraft(shared.html);
-      setSaveStatus("Loaded from share link");
-    } else {
-      const draft = loadDraft();
-      if (draft) {
-        codeInput.value = draft;
-        setSaveStatus("Saved locally");
-      } else {
-        setSaveStatus("Nothing saved");
+    if (btnSave) btnSave.addEventListener('click', () => {
+      try {
+        localStorage.setItem(LS_KEY, getCurrentCode());
+        setSaveStatus('Saved locally');
+      } catch {
+        setSaveStatus('Save failed');
       }
-    }
-
-    let t = null;
-    codeInput.addEventListener("input", () => {
-      if (t) clearTimeout(t);
-      t = setTimeout(() => saveDraft(codeInput.value), 220);
     });
 
-    if (btnClearSaved) {
-      btnClearSaved.addEventListener("click", () => {
-        clearDraft();
-        toast("Local save cleared.");
-      });
-    }
-  }
-
-  // -----------------------------
-  // Sanitization (best-effort)
-  // -----------------------------
-  function sanitizePrototypeHtml(inputHtml) {
-    let html = String(inputHtml || "").trim();
-    if (!html) return "";
-
-    // If user pasted partial HTML, wrap it
-    if (!/<html[\s>]/i.test(html)) {
-      html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${html}</body></html>`;
-    }
-
-    // Remove external script src for safety
-    html = html.replace(
-      /<script\b[^>]*\bsrc\s*=\s*["'](?:https?:)?\/\/[^"']+["'][^>]*>\s*<\/script>/gi,
-      ""
-    );
-
-    // Remove meta refresh
-    html = html.replace(/<meta\b[^>]*http-equiv\s*=\s*["']refresh["'][^>]*>/gi, "");
-
-    return html;
-  }
-
-  // -----------------------------
-  // Preview / Launch
-  // -----------------------------
-  function setButtonLoading(isLoading) {
-    if (!btnLaunch) return;
-    const label = btnLaunch.querySelector(".btn-label");
-    if (isLoading) {
-      btnLaunch.classList.add("is-loading");
-      btnLaunch.disabled = true;
-      if (label) label.textContent = "Launching…";
-    } else {
-      btnLaunch.classList.remove("is-loading");
-      btnLaunch.disabled = false;
-      if (label) label.textContent = "Launch preview";
-    }
-  }
-
-  async function launchPreview() {
-    if (!codeInput || !previewFrame) return;
-
-    const raw = codeInput.value.trim();
-    if (!raw) {
-      toast("Paste HTML first.");
-      return;
-    }
-
-    setButtonLoading(true);
-    await sleep(randomDelay());
-
-    const html = sanitizePrototypeHtml(raw);
-    previewFrame.srcdoc = html;
-
-    bumpMetric("launches");
-
-    // Clear share input because content changed
-    if (shareLink) shareLink.value = "";
-
-    setButtonLoading(false);
-    toast("Preview launched.");
-  }
-
-  function reloadPreview() {
-    if (!previewFrame) return;
-    const current = previewFrame.srcdoc;
-    previewFrame.srcdoc = current;
-    bumpMetric("launches");
-    toast("Reloaded.");
-  }
-
-  function openPreviewInNewTab() {
-    if (!codeInput) return;
-    const html = sanitizePrototypeHtml(codeInput.value || "");
-    if (!html.trim()) {
-      toast("Paste HTML first.");
-      return;
-    }
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  }
-
-  function bindPreview() {
-    if (btnLaunch) btnLaunch.addEventListener("click", launchPreview);
-    if (btnReload) btnReload.addEventListener("click", reloadPreview);
-
-    if (btnOpenNewTab) btnOpenNewTab.addEventListener("click", openPreviewInNewTab);
-
-    if (btnClearCode && codeInput) {
-      btnClearCode.addEventListener("click", () => {
-        codeInput.value = "";
-        saveDraft("");
-        if (previewFrame) previewFrame.srcdoc = "";
-        if (shareLink) shareLink.value = "";
-        toast("Cleared.");
-      });
-    }
-
-    if (btnDownloadHtml && codeInput) {
-      btnDownloadHtml.addEventListener("click", () => {
-        const html = sanitizePrototypeHtml(codeInput.value || "");
-        if (!html.trim()) {
-          toast("Paste HTML first.");
-          return;
-        }
-        downloadText("prototype.html", html, "text/html");
-        toast("Downloaded prototype.html");
-      });
-    }
-
-    if (btnPasteStarter && codeInput) {
-      btnPasteStarter.addEventListener("click", () => {
-        const starter = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Prototype</title>
-<style>
-  :root { color-scheme: dark; }
-  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0b0c10; color:#f5f6fa; padding:24px; }
-  .card { max-width:760px; margin:0 auto; background:#111217; border:1px solid #1f2230; border-radius:14px; padding:18px; }
-  .muted { color:#a4a7b3; }
-  input, button { font: inherit; }
-  button { background:#ff7a45; border:none; color:#160a05; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .pill { padding:6px 10px; border-radius:999px; border:1px solid #1f2230; color:#a4a7b3; font-size:12px; }
-</style>
-</head>
-<body>
-  <div class="card">
-    <div class="row" style="justify-content:space-between;">
-      <div>
-        <h1 style="margin:0 0 6px;">Quick prototype</h1>
-        <div class="muted">One interaction. One flow. Test it.</div>
-      </div>
-      <div class="pill">prototype</div>
-    </div>
-
-    <div style="margin-top:16px;" class="row">
-      <input id="name" placeholder="Type a name…" style="padding:10px 12px;border-radius:10px;border:1px solid #1f2230;background:#0b0c10;color:#f5f6fa;" />
-      <button id="go">Generate</button>
-    </div>
-
-    <div id="out" class="muted" style="margin-top:14px;"></div>
-  </div>
-
-<script>
-  const name = document.getElementById('name');
-  const out = document.getElementById('out');
-  document.getElementById('go').addEventListener('click', () => {
-    const v = (name.value || '').trim() || 'friend';
-    out.textContent = 'Hello ' + v + '. Now add one real feature.';
-  });
-</script>
-</body>
-</html>`;
-        codeInput.value = starter;
-        saveDraft(starter);
-        toast("Starter inserted.");
-      });
-    }
-
-    // Cmd/Ctrl + Enter to launch
-    if (codeInput && btnLaunch) {
-      codeInput.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !btnLaunch.disabled) {
-          btnLaunch.click();
-        }
-      });
-    }
-  }
-
-  // -----------------------------
-  // Share Links (hash-based)
-  // NOTE: This is limited by URL length.
-  // -----------------------------
-  function setShareHash(payload) {
-    const json = JSON.stringify(payload);
-    const b64 = encodeURIComponent(b64EncodeUtf8(json));
-
-    // Conservative URL size limit
-    if (b64.length > 1800) {
-      return { ok: false, reason: "too_long", size: b64.length };
-    }
-
-    location.hash = `#share=${b64}`;
-    localStorage.setItem(LS.SHARE_TOKEN, b64);
-    return { ok: true, token: b64 };
-  }
-
-  function readShareHash() {
-    const m = location.hash.match(/#share=([^&]+)/);
-    if (!m) return null;
-    try {
-      const json = b64DecodeUtf8(decodeURIComponent(m[1]));
-      const obj = safeJsonParse(json, null);
-      return obj && typeof obj === "object" ? obj : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function buildShareText(url) {
-    const link = url || location.href;
-    return `VibeSnap prototype:\n${link}\n\nOne question:\nWould you use this? If not, what’s missing?`;
-  }
-
-  function createShareLink() {
-    if (!codeInput || !shareLink) return;
-
-    const raw = codeInput.value.trim();
-    if (!raw) {
-      toast("Paste HTML first.");
-      return;
-    }
-
-    const html = sanitizePrototypeHtml(raw);
-    const res = setShareHash({ v: 1, html, createdAt: nowISO() });
-
-    if (!res.ok) {
-      toast("Prototype too large for a link. Keep it smaller for sharing.");
-      shareLink.value = "";
-      return;
-    }
-
-    shareLink.value = location.href;
-    toast("Share link created.");
-  }
-
-  function resetShareLink() {
-    if (location.hash.startsWith("#share=")) {
-      history.replaceState(null, "", location.pathname + location.search);
-    }
-    localStorage.removeItem(LS.SHARE_TOKEN);
-    if (shareLink) shareLink.value = "";
-    toast("Share link reset.");
-  }
-
-  function bindShare() {
-    if (btnCreateShare) btnCreateShare.addEventListener("click", createShareLink);
-
-    if (btnCopyShareLink && shareLink) {
-      btnCopyShareLink.addEventListener("click", async () => {
-        if (!shareLink.value) {
-          toast("Create a share link first.");
-          return;
-        }
-        const ok = await copyToClipboard(shareLink.value);
-        toast(ok ? "Link copied." : "Copy failed.");
-      });
-    }
-
-    if (btnCopyShareText) {
-      btnCopyShareText.addEventListener("click", async () => {
-        const text = buildShareText(shareLink?.value || "");
-        const ok = await copyToClipboard(text);
-        toast(ok ? "Share text copied." : "Copy failed.");
-      });
-    }
-
-    if (btnResetLink) btnResetLink.addEventListener("click", resetShareLink);
-  }
-
-  // -----------------------------
-  // Feedback UI
-  // -----------------------------
-  let sentiment = null;
-
-  function selectSentiment(value) {
-    sentiment = value;
-    chips.forEach((c) => c.classList.toggle("is-selected", c.getAttribute("data-sentiment") === value));
-  }
-
-  function renderFeedback() {
-    if (!recentFeedback) return;
-
-    const list = getFeedback();
-    if (!list.length) {
-      recentFeedback.innerHTML = `<div class="tiny muted">No feedback yet.</div>`;
-      return;
-    }
-
-    const last = list.slice(-6).reverse();
-    recentFeedback.innerHTML = last
-      .map((it) => {
-        const label = it.sentiment === "useful" ? "👍 Useful" : "👎 Not useful";
-        const when = new Date(it.at).toLocaleString();
-        const text = it.text ? escapeHtml(it.text) : `<span class="tiny muted">(no note)</span>`;
-        return `
-          <div class="list-item">
-            <div><strong>${label}</strong> <span class="tiny muted">• ${escapeHtml(when)}</span></div>
-            <div class="muted" style="margin-top:6px;">${text}</div>
-          </div>`;
-      })
-      .join("");
-  }
-
-  function bindFeedback() {
-    chips.forEach((c) => {
-      c.addEventListener("click", () => selectSentiment(c.getAttribute("data-sentiment")));
+    if (btnCreateShare) btnCreateShare.addEventListener('click', async () => {
+      const html = getCurrentCode();
+      const url = buildShareUrl(html);
+      if (!url) {
+        setSaveStatus('Prototype too large for URL share');
+        return;
+      }
+      if (shareLink) shareLink.value = url;
+      setSaveStatus('Share link created');
     });
 
-    if (btnSubmitFeedback) {
-      btnSubmitFeedback.addEventListener("click", () => {
-        if (!sentiment) {
-          toast("Pick Useful or Not useful.");
-          return;
-        }
-        const text = (feedbackText?.value || "").trim();
+    if (btnCopyShare) btnCopyShare.addEventListener('click', async () => {
+      if (!shareLink) return;
+      const ok = await copyToClipboard(shareLink.value);
+      setSaveStatus(ok ? 'Link copied' : 'Copy failed');
+    });
 
-        const list = getFeedback();
-        list.push({
-          id: (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)),
-          sentiment,
-          text,
-          at: nowISO(),
-        });
-        setFeedback(list);
+    if (btnCopyShareText) btnCopyShareText.addEventListener('click', async () => {
+      if (!shareText) return;
+      const ok = await copyToClipboard(shareText.value);
+      setSaveStatus(ok ? 'Copy copied' : 'Copy failed');
+    });
 
-        bumpMetric("feedback");
+    if (btnOpenFeedback) btnOpenFeedback.addEventListener('click', openModal);
 
-        // Reset
-        if (feedbackText) feedbackText.value = "";
-        selectSentiment(null);
+    // restore last saved unless a share loaded it
+    const loadedShare = tryLoadSharedPrototype();
+    if (!loadedShare) {
+      try {
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved && saved.includes('<')) setCurrentCode(saved);
+      } catch {}
+    }
+    if (codeInput && !codeInput.value.trim()) setCurrentCode(sampleHTML());
+    runInFrame(getCurrentCode());
+  }
 
-        renderFeedback();
-        if (feedbackSaveStatus) feedbackSaveStatus.textContent = "Saved locally";
-        toast("Feedback saved.");
+  function initFeedback() {
+    if (!modal) return;
+
+    // close on overlay click / escape
+    modal.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target && target.getAttribute && target.getAttribute('data-close') === 'true') closeModal();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+
+    if (btnSubmitFeedback) btnSubmitFeedback.addEventListener('click', () => {
+      const text = safeText(feedbackText && feedbackText.value).trim();
+      if (!text) return;
+      const items = readFeedback();
+      items.push({ ts: Date.now(), text });
+      writeFeedback(items);
+      if (feedbackText) feedbackText.value = '';
+      renderFeedback();
+      if (feedbackSaveNote) {
+        feedbackSaveNote.textContent = 'Saved locally';
+        window.setTimeout(() => feedbackSaveNote.textContent = '', 1200);
+      }
+    });
+
+    if (btnClearFeedback) btnClearFeedback.addEventListener('click', () => {
+      writeFeedback([]);
+      renderFeedback();
+    });
+
+    if (btnExportFeedback) btnExportFeedback.addEventListener('click', async () => {
+      const items = readFeedback();
+      const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vibesnap-feedback.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  function initImport() {
+    updateImportUI();
+
+    // file pickers
+    if (fileInline) fileInline.addEventListener('change', () => handleFiles(fileInline.files));
+    if (fileHtml) fileHtml.addEventListener('change', () => handleFiles(fileHtml.files));
+    if (fileCss) fileCss.addEventListener('change', () => handleFiles(fileCss.files));
+    if (fileJs) fileJs.addEventListener('change', () => handleFiles(fileJs.files));
+
+    // dropzone
+    if (importDrop) {
+      const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+      ['dragenter','dragover','dragleave','drop'].forEach(evt => importDrop.addEventListener(evt, prevent));
+      importDrop.addEventListener('dragenter', () => importDrop.classList.add('is-drag'));
+      importDrop.addEventListener('dragleave', () => importDrop.classList.remove('is-drag'));
+      importDrop.addEventListener('drop', (e) => {
+        importDrop.classList.remove('is-drag');
+        handleFiles(e.dataTransfer && e.dataTransfer.files);
       });
     }
 
-    if (btnExportFeedback) {
-      btnExportFeedback.addEventListener("click", () => {
-        const list = getFeedback();
-        downloadText("vibesnap-feedback.json", JSON.stringify(list, null, 2), "application/json");
-        toast("Exported feedback.");
-      });
-    }
+    if (btnAssemble) btnAssemble.addEventListener('click', () => {
+      const html = assemble();
+      if (html) toast('Assembled');
+      else toast('Add an HTML file to assemble');
+    });
 
-    if (btnClearFeedback) {
-      btnClearFeedback.addEventListener("click", () => {
-        if (!confirm("Clear all feedback stored on this device?")) return;
-        setFeedback([]);
-        renderFeedback();
-
-        // Reset feedback metric only
-        const m = getMetrics();
-        m.feedback = 0;
-        setMetrics(m);
-        renderMetrics();
-
-        toast("Feedback cleared.");
-      });
-    }
+    if (btnRunImport) btnRunImport.addEventListener('click', () => {
+      const html = assemble();
+      if (!html) { toast('Add an HTML file to run'); return; }
+      // Push to preview tab for a smoother flow
+      setCurrentCode(html);
+      runInFrame(html);
+      setActiveTab('preview');
+      setSaveStatus('Imported into preview');
+    });
   }
 
-  // -----------------------------
-  // Metrics UI
-  // -----------------------------
-  function renderMetrics() {
-    const m = getMetrics();
-    if (statViews) statViews.textContent = String(m.views || 0);
-    if (statLaunches) statLaunches.textContent = String(m.launches || 0);
-    if (statFeedback) statFeedback.textContent = String(m.feedback || 0);
+  function initPrompt() {
+    // live update
+    [pbIdea,pbGoal,pbScreens,pbInteractions,pbStyle,pbNotes].forEach(el => {
+      if (!el) return;
+      el.addEventListener('input', updatePromptOut);
+    });
+    updatePromptOut();
+
+    if (btnCopyPrompt) btnCopyPrompt.addEventListener('click', async () => {
+      const ok = await copyToClipboard(promptOut ? promptOut.value : '');
+      if (btnCopyPrompt) btnCopyPrompt.textContent = ok ? 'Copied' : 'Copy failed';
+      window.setTimeout(() => { if (btnCopyPrompt) btnCopyPrompt.textContent = 'Copy prompt'; }, 900);
+    });
   }
 
-  function bindMetrics() {
-    if (btnResetAnalytics) {
-      btnResetAnalytics.addEventListener("click", () => {
-        if (!confirm("Reset local analytics on this device?")) return;
-        localStorage.removeItem(LS.METRICS);
-        renderMetrics();
-        toast("Analytics reset.");
-      });
-    }
-  }
-
-  // -----------------------------
-  // Boot: load from share hash if present
-  // -----------------------------
-  function bootShareIfPresent() {
-    const shared = readShareHash();
-    if (!shared || typeof shared.html !== "string") return;
-
-    // Ensure we’re on the app page
-    setActivePage("app");
-
-    if (codeInput) {
-      codeInput.value = shared.html;
-      saveDraft(shared.html);
-      setSaveStatus("Loaded from share link");
-      // Auto-launch for instant value
-      if (previewFrame) previewFrame.srcdoc = sanitizePrototypeHtml(shared.html);
-      bumpMetric("launches");
-      toast("Loaded shared prototype.");
-    }
-  }
-
-  // -----------------------------
-  // Boot
-  // -----------------------------
+  // ---------- Boot ----------
   function boot() {
-    bindNav();
-    bindAutosave();
-    bindPreview();
-    bindShare();
-    bindFeedback();
-    bindMetrics();
+    initTabs();
+    initPreview();
+    initPrompt();
+    initImport();
+    initFeedback();
 
-    // Count one view per page load (local-only)
-    bumpMetric("views");
-    renderFeedback();
-
-    // Start on app by default unless user navigates
-    setActivePage("app");
-    setActiveTab("preview");
-
-    // Load shared prototype if present
-    bootShareIfPresent();
+    // defensively hide panels not wired (if any)
+    Object.values(panels).forEach(p => { if (p) p.hidden = true; });
+    // setActiveTab will unhide the right one
+    const hash = (location.hash || '').replace('#','').trim().toLowerCase();
+    if (hash === 'prompt' || hash === 'import' || hash === 'preview') setActiveTab(hash);
+    else setActiveTab('preview');
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
