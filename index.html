@@ -1,144 +1,204 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>VibeSnap</title>
-<meta content="Generate prototypes anywhere. Validate them here." name="description"/>
-<link href="styles.css" rel="stylesheet"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSnap — Workspace</title>
+  <meta name="description" content="Paste a single-file HTML prototype. Launch it in a sandboxed preview tab and collect lightweight feedback." />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<!-- Toast -->
-<div aria-live="polite" class="toast" id="toast"></div>
-<!-- Top bar -->
-<header class="topbar">
-<div class="logo">
-<span class="logo-mark">🔥</span>
-<span class="logo-text">vibesnap</span>
-</div>
-<nav class="nav">
-<button class="nav-link" data-nav="app">App</button>
-<button class="nav-link" data-nav="pricing">Pricing</button>
-</nav>
-</header>
-<!-- App Page -->
-<main class="page page-active" id="pageApp"><div class="grid"><div class="col col-left"><section class="panel">
-<header class="panel-header">
-<h2>Prototype HTML</h2>
-<div class="panel-actions">
-<button class="btn btn-secondary" id="btnPasteStarter">Paste starter</button>
-<button class="btn btn-ghost" id="btnClearCode">Clear</button>
-</div>
-</header>
-<textarea class="editor" id="codeInput" placeholder="Paste a complete single-file HTML prototype here…" spellcheck="false"></textarea>
-<div class="panel-footer">
-<div class="save-status" id="saveStatus">Nothing saved</div>
-<div class="panel-actions">
-<button class="btn btn-primary" id="btnDownloadHtml">Download HTML</button>
-<button class="btn btn-primary" id="btnLaunch">
-<span class="btn-label">Launch preview</span>
-</button>
-</div>
-</div>
-</section><section class="panel">
-<header class="panel-header">
-<h2>Live preview</h2>
-<div class="panel-actions">
-<button class="btn btn-ghost" id="btnReload">Reload</button>
-</div>
-</header>
-<iframe id="previewFrame" sandbox="allow-scripts allow-forms allow-modals" title="Prototype preview"></iframe>
-</section></div><div class="col col-right"><section class="panel">
-<header class="panel-header">
-<h2>Share for feedback</h2>
-</header>
-<div class="share-row">
-<input class="input" id="shareLink" placeholder="Create a share link…" readonly="" type="text"/>
-<button class="btn btn-primary" id="btnCreateShare">Create</button>
-</div>
-<div class="panel-actions">
-<button class="btn btn-secondary" id="btnCopyShareLink">Copy link</button>
-<button class="btn btn-secondary" id="btnCopyShareText">Copy feedback prompt</button>
-<button class="btn btn-secondary" id="btnOpenNewTab">Open</button>
-<button class="btn btn-ghost" id="btnResetLink">Clear</button>
-</div>
-</section><section class="panel">
-<header class="panel-header">
-<h2>Feedback</h2>
-</header>
-<div class="sentiment">
-<button class="pill sentiment-btn" data-sentiment="useful">Useful</button>
-<button class="pill sentiment-btn" data-sentiment="confusing">Confusing</button>
-<button class="pill sentiment-btn" data-sentiment="needs-work">Needs work</button>
-</div>
-<textarea class="editor" id="feedbackText" placeholder="What worked? What didn’t?"></textarea>
-<div class="panel-actions">
-<button class="btn btn-primary" id="btnSubmitFeedback">Save feedback</button>
-<button class="btn btn-ghost" id="btnClearFeedback">Clear</button>
-<button class="btn btn-ghost" id="btnExportFeedback">Export</button>
-</div>
-<div class="save-status" id="feedbackSaveStatus"></div>
-<div class="feedback-list" id="recentFeedback"></div>
-</section><section class="metrics">
-<div class="metric"><strong id="statViews">0</strong><span>Views</span></div>
-<div class="metric"><strong id="statLaunches">0</strong><span>Launches</span></div>
-<div class="metric"><strong id="statFeedback">0</strong><span>Feedback</span></div>
-<button class="btn btn-ghost" id="btnResetAnalytics">Reset analytics</button>
-</section></div></div>
-<section class="hero">
-<h1>Prototype fast. Validate faster.</h1>
-<p class="subtitle">
-        Paste a single-file HTML prototype, launch it instantly, and collect feedback — without setup.
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html" aria-label="VibeSnap home">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="word">vibesnap</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="pill is-active" href="index.html">Workspace</a>
+        <a class="pill" href="prompt.html">Prompt builder</a>
+        <a class="pill" href="pricing.html">Pricing</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Prototype fast. Validate faster.</h1>
+      <p>Paste a single-file HTML prototype, then launch it in a separate preview tab. Share a local link and collect quick feedback without setup.</p>
+      <div class="chips" aria-label="Trust notes">
+        <span class="chip">Runs locally</span>
+        <span class="chip">Sandboxed preview</span>
+        <span class="chip">No cookies</span>
+        <span class="chip">No tracking pixels</span>
+      </div>
+      <p class="privacy">
+        Your ideas stay yours. VibeSnap doesn’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
       </p>
-</section>
-<!-- Editor -->
+    </section>
 
-<!-- Preview -->
+    <section class="grid" aria-label="Workspace">
+      <div class="stack">
+        <section class="card" aria-label="Prototype HTML">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Prototype HTML</h2>
+                <p class="card-sub">Paste a complete <b>single-file</b> HTML prototype (inline CSS + JS). Then launch a preview tab.</p>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnPasteStarter" type="button">Paste starter</button>
+                <button class="btn small ghost" id="btnClearHtml" type="button">Clear</button>
+              </div>
+            </div>
 
-<!-- Share -->
+            <div class="callout" role="note">
+              <span class="tag">Tip</span>
+              <div>
+                <b>For best results</b>
+                <p>Ask your AI tool to export <b>one self-contained HTML file</b> (no external libraries). If you need split files, use the Import helper.</p>
+              </div>
+            </div>
 
-<!-- Feedback -->
+            <div class="field">
+              <label class="label" for="protoHtml">Prototype HTML</label>
+              <textarea class="textarea" id="protoHtml" placeholder="Paste a complete single-file HTML prototype here..."></textarea>
+              <div class="row" style="justify-content:space-between;">
+                <span class="hint" id="saveState">Nothing saved</span>
+                <div class="row">
+                  <button class="btn small" id="btnDownloadHtml" type="button">Download HTML</button>
+                  <button class="btn small primary" id="btnLaunchPreview" type="button">Launch preview</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-<!-- Metrics -->
+        <section class="card" aria-label="Live preview removed notice">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Preview in a separate tab</h2>
+                <p class="card-sub">Keeps the workspace focused. Preview loads in a sandboxed page.</p>
+              </div>
+              <button class="btn small" id="btnOpenPreview" type="button">Open preview</button>
+            </div>
+            <div class="callout" role="note">
+              <span class="tag">Safety</span>
+              <div>
+                <b>Sandbox constraints</b>
+                <p>Preview runs in an isolated iframe. It can’t read this page. Some external scripts/assets may be blocked depending on the browser.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
-</main>
-<!-- Pricing Page -->
-<main class="page" id="pagePricing">
-<section class="hero">
-<h1>Simple pricing</h1>
-<p class="subtitle">Pay only when you need to share and validate.</p>
-</section>
-<section class="pricing-grid">
-<div class="price-card">
-<h3>Free</h3>
-<p>Local prototyping only</p>
-<ul>
-<li>Paste &amp; preview HTML</li>
-<li>Local feedback</li>
-<li>No accounts</li>
-</ul>
-<span class="price">$0</span>
-</div>
-<div class="price-card featured">
-<div class="badge">Lifetime</div>
-<h3>Lifetime Access</h3>
-<p>Everything unlocked forever</p>
-<ul>
-<li>Shareable links</li>
-<li>Feedback export</li>
-<li>Early features</li>
-<li>Support development</li>
-</ul>
-<span class="price">$39</span>
-</div>
-</section>
-</main>
-<footer class="footer">
-<span>vibesnap.xyz</span>
-<span class="dot">•</span>
-<span>Local-first. Privacy-respecting.</span>
-</footer>
-<script src="app.js"></script>
+      <div class="stack">
+        <section class="card" aria-label="Share for feedback">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Share for feedback</h2>
+                <p class="card-sub">Creates a local share link that opens the preview tab on this device. (Backend sharing comes later.)</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label" for="shareInput">Share link</label>
+              <div class="row">
+                <input class="input" id="shareInput" placeholder="Create a share link…" autocomplete="off" />
+                <button class="btn primary" id="btnCreateShare" type="button">Create</button>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnCopyShare" type="button">Copy link</button>
+                <button class="btn small" id="btnCopyFeedbackPrompt" type="button">Copy feedback prompt</button>
+                <button class="btn small" id="btnOpenShare" type="button">Open</button>
+                <button class="btn small ghost" id="btnClearShare" type="button">Clear</button>
+              </div>
+            </div>
+
+            <div class="callout" role="note" style="margin-top:12px">
+              <span class="tag">Tip</span>
+              <div>
+                <b>Quick signal</b>
+                <p>Share the link with one question, e.g. “Would you use this? What’s missing?” + a screenshot.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="Feedback collection">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Feedback</h2>
+                <p class="card-sub">Designed for quick validation. Keep it simple.</p>
+              </div>
+            </div>
+
+            <div class="seg" role="group" aria-label="Feedback tag">
+              <button type="button" class="tagBtn" data-tag="Useful" aria-pressed="true">Useful</button>
+              <button type="button" class="tagBtn" data-tag="Confusing" aria-pressed="false">Confusing</button>
+              <button type="button" class="tagBtn" data-tag="Needs work" aria-pressed="false">Needs work</button>
+            </div>
+
+            <div class="field">
+              <label class="label" for="feedbackText">Feedback</label>
+              <textarea class="textarea" id="feedbackText" style="min-height:140px" placeholder="What worked? What didn’t? One sentence is enough."></textarea>
+              <div class="row" style="justify-content:space-between;">
+                <span class="hint" id="feedbackStatus">No feedback yet.</span>
+                <div class="row">
+                  <button class="btn small primary" id="btnSaveFeedback" type="button">Save feedback</button>
+                  <button class="btn small ghost" id="btnClearFeedback" type="button">Clear</button>
+                  <button class="btn small" id="btnExportFeedback" type="button">Export</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="Lightweight analytics">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Lightweight analytics</h2>
+                <p class="card-sub">Local-first. No identity. Just actions.</p>
+              </div>
+              <button class="btn small" id="btnResetAnalytics" type="button">Reset</button>
+            </div>
+
+            <div class="kpi">
+              <div class="k"><div class="n" id="kViews">0</div><div class="t">Views</div></div>
+              <div class="k"><div class="n" id="kLaunches">0</div><div class="t">Launches</div></div>
+              <div class="k"><div class="n" id="kFeedback">0</div><div class="t">Feedback</div></div>
+            </div>
+
+            <div class="callout" role="note" style="margin-top:12px">
+              <span class="tag">Validate fast</span>
+              <div>
+                <b>Use a single question</b>
+                <p>Ask: “Would you use this?” or “What’s missing?” Then iterate quickly. Don’t overbuild.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap">
+        <span>vibesnap.xyz</span>
+        <span>Local-first. Privacy-respecting.</span>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="title" id="toastTitle">Saved</div>
+    <div class="msg" id="toastMsg">Done.</div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>

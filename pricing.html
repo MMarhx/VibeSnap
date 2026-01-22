@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSnap — Pricing</title>
+  <meta name="description" content="Simple pricing for local prototyping and optional sharing features." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html" aria-label="VibeSnap home">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="word">vibesnap</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="pill" href="index.html">Workspace</a>
+        <a class="pill" href="prompt.html">Prompt builder</a>
+        <a class="pill is-active" href="pricing.html">Pricing</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Simple pricing</h1>
+      <p>Pay only when you need to share and validate.</p>
+    </section>
+
+    <section class="grid" style="grid-template-columns: 1fr 1fr;" aria-label="Pricing">
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Free</h2>
+              <p class="card-sub">Local prototyping only</p>
+            </div>
+          </div>
+          <ul style="margin:10px 0 0; padding-left:18px; color: var(--muted); font-size:13px; line-height:1.6">
+            <li>Paste & preview HTML</li>
+            <li>Local feedback</li>
+            <li>No accounts</li>
+          </ul>
+          <div style="margin-top:14px;font-size:28px;font-weight:900;letter-spacing:-.5px">$0</div>
+          <div class="hint" style="margin-top:6px">Best for personal workflow.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Lifetime Access</h2>
+              <p class="card-sub">Everything unlocked forever</p>
+            </div>
+            <span class="chip" style="border-color:rgba(255,138,0,.35);background:rgba(255,138,0,.10)">Lifetime</span>
+          </div>
+          <ul style="margin:10px 0 0; padding-left:18px; color: var(--muted); font-size:13px; line-height:1.6">
+            <li>Shareable links (when backend ships)</li>
+            <li>Feedback export</li>
+            <li>Early features</li>
+            <li>Support development</li>
+          </ul>
+          <div style="margin-top:14px;font-size:28px;font-weight:900;letter-spacing:-.5px">$39</div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn primary" type="button" disabled title="Checkout not wired yet">Get Lifetime</button>
+            <span class="hint">Checkout coming later.</span>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap">
+        <span>vibesnap.xyz</span>
+        <span>Local-first. Privacy-respecting.</span>
+      </div>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

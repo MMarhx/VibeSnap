@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSnap — Prompt builder</title>
+  <meta name="description" content="Generate a prompt that asks your AI tool to export a single self-contained HTML file." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html" aria-label="VibeSnap home">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="word">vibesnap</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="pill" href="index.html">Workspace</a>
+        <a class="pill is-active" href="prompt.html">Prompt builder</a>
+        <a class="pill" href="pricing.html">Pricing</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Prompt builder</h1>
+      <p>Generate a copy‑paste prompt that tells your AI tool to export a <b>single self-contained HTML file</b> you can drag into VibeSnap.</p>
+      <p class="privacy">Copy → paste into your AI tool → ask it to export one .html file → drag that file into VibeSnap.</p>
+    </section>
+
+    <section class="card" aria-label="Prompt builder">
+      <div class="card-inner">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Generate a prototype-ready prompt</h2>
+            <p class="card-sub">Fill in what you’re building. Keep it small and testable.</p>
+          </div>
+          <div class="row">
+            <button class="btn small" id="btnPromptReset" type="button">Reset</button>
+            <button class="btn small primary" id="btnCopyPrompt" type="button">Copy prompt</button>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="field">
+            <label class="label" for="pbWhat">What are you building?</label>
+            <input class="input" id="pbWhat" placeholder="Example: spending tracker" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="pbFor">Who is it for?</label>
+            <input class="input" id="pbFor" placeholder="Example: people splitting bills" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="pbGoal">Primary goal</label>
+            <input class="input" id="pbGoal" placeholder="Example: log expenses quickly" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="pbScreens">Key screens</label>
+            <input class="input" id="pbScreens" placeholder="Dashboard, Add expense, History" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="pbInteractions">Must-have interactions</label>
+            <input class="input" id="pbInteractions" placeholder="Add/edit/delete entries" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="pbData">Data to store</label>
+            <input class="input" id="pbData" placeholder="amount, category, date, notes" />
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label class="label" for="pbStyle">Style</label>
+            <input class="input" id="pbStyle" placeholder="Clean, modern, dark-mode friendly" />
+            <div class="hint">Tip: ask for realistic empty states, example data, and one meaningful interaction.</div>
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label class="label" for="pbNotes">Extra notes (optional)</label>
+            <input class="input" id="pbNotes" placeholder="Example: include realistic empty states, sample data, and a tiny 'prototype' label." />
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label class="label" for="pbOutput">Generated prompt</label>
+            <textarea class="textarea" id="pbOutput" style="min-height:260px" readonly></textarea>
+            <div class="hint">Make sure the AI exports <b>one</b> HTML file with inline CSS + JS, and no external assets.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap">
+        <span>vibesnap.xyz</span>
+        <span>Local-first. Privacy-respecting.</span>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="title" id="toastTitle">Copied</div>
+    <div class="msg" id="toastMsg">Prompt copied to clipboard.</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
