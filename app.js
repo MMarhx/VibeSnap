@@ -1,574 +1,628 @@
-/* VibeSnap — app.js
-   Local-first prototype runner with prompt builder + import helper.
-   No analytics, no external calls. */
+/* =========================================================
+VIBESNAP — app.js
+Static, privacy-first prototype runner (single-file HTML) + lightweight validation tools
+No external libs. Works on static hosting (Cloudflare Pages, etc).
+========================================================= */
 
 (() => {
-  'use strict';
+  "use strict";
 
-  const $ = (id) => document.getElementById(id);
-  const qs = (sel, root=document) => root.querySelector(sel);
-  const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  // -----------------------------
+  // Storage keys
+  // -----------------------------
+  const LS = {
+    DRAFT_HTML: "vibesnap:draft_html",
+    FEEDBACK: "vibesnap:feedback",
+    METRICS: "vibesnap:metrics",
+  };
 
-  const safeText = (s) => (s == null ? '' : String(s));
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const nowISO = () => new Date().toISOString();
+
+  const safeJsonParse = (s, fallback) => {
+    try { return JSON.parse(s); } catch { return fallback; }
+  };
+
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-  // ---------- Tabs ----------
-  const nav = {
-    preview: $('navPreview'),
-    prompt: $('navPrompt'),
-    import: $('navImport'),
-  };
-  const panels = {
-    preview: $('panelPreview'),
-    prompt: $('panelPrompt'),
-    import: $('panelImport'),
-  };
-
-  function setActiveTab(key) {
-    const keys = ['preview','prompt','import'];
-    keys.forEach(k => {
-      const btn = nav[k];
-      const panel = panels[k];
-      if (btn) btn.classList.toggle('is-active', k === key);
-      if (btn) btn.setAttribute('aria-selected', k === key ? 'true' : 'false');
-      if (panel) panel.hidden = (k !== key);
-    });
-    // Update hash for shareable navigation only (not prototype content)
-    try { history.replaceState(null, '', `#${key}`); } catch {}
+  function toast(msg) {
+    const el = $("#toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 2400);
   }
 
-  function initTabs() {
-    const clickMap = [
-      ['preview', nav.preview],
-      ['prompt', nav.prompt],
-      ['import', nav.import],
-    ];
-    clickMap.forEach(([k, btn]) => {
-      if (!btn) return;
-      btn.addEventListener('click', () => setActiveTab(k));
-    });
-
-    // initial
-    const hash = (location.hash || '').replace('#','').trim().toLowerCase();
-    if (hash === 'prompt' || hash === 'import' || hash === 'preview') setActiveTab(hash);
-    else setActiveTab('preview');
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // ---------- Preview runner ----------
-  const codeInput = $('codeInput');
-  const previewFrame = $('previewFrame');
-  const btnRun = $('btnRun');
-  const btnSample = $('btnSample');
-  const btnSave = $('btnSave');
-  const saveStatus = $('saveStatus');
-  const btnOpenFeedback = $('btnOpenFeedback');
-  const btnCreateShare = $('btnCreateShare');
-  const shareLink = $('shareLink');
-  const btnCopyShare = $('btnCopyShare');
-  const shareText = $('shareText');
-  const btnCopyShareText = $('btnCopyShareText');
-
-  const LS_KEY = 'vibesnap:last_code_v1';
-
-  function setSaveStatus(msg) {
-    if (!saveStatus) return;
-    saveStatus.textContent = msg;
-    saveStatus.classList.add('is-live');
-    window.setTimeout(() => saveStatus.classList.remove('is-live'), 800);
+  function debounce(fn, ms) {
+    let t = null;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
   }
 
-  function getCurrentCode() {
-    return safeText(codeInput ? codeInput.value : '');
-  }
+  // -----------------------------
+  // Elements (guarded)
+  // -----------------------------
+  const pageApp = $("#pageApp");
+  const pagePricing = $("#pagePricing");
 
-  function setCurrentCode(html) {
-    if (!codeInput) return;
-    codeInput.value = safeText(html);
-  }
+  const codeInput = $("#codeInput");
+  const btnPasteStarter = $("#btnPasteStarter");
+  const btnDownloadHtml = $("#btnDownloadHtml");
+  const btnClearCode = $("#btnClearCode");
 
-  function runInFrame(html) {
-    if (!previewFrame) return;
-    // Use srcdoc for safety; frame should be sandboxed in HTML.
-    previewFrame.srcdoc = safeText(html);
-  }
+  const btnLaunch = $("#btnLaunch");
+  const btnReload = $("#btnReload");
+  const previewFrame = $("#previewFrame");
 
-  function sampleHTML() {
-    return `<!doctype html>
-<html>
+  const saveStatus = $("#saveStatus");
+  const btnClearSaved = $("#btnClearSaved");
+
+  const shareLink = $("#shareLink");
+  const btnCreateShare = $("#btnCreateShare");
+  const btnCopyShareLink = $("#btnCopyShareLink");
+  const btnCopyShareText = $("#btnCopyShareText");
+  const btnResetLink = $("#btnResetLink");
+  const btnOpenNewTab = $("#btnOpenNewTab");
+
+  const feedbackText = $("#feedbackText");
+  const btnSubmitFeedback = $("#btnSubmitFeedback");
+  const btnClearFeedback = $("#btnClearFeedback");
+  const btnExportFeedback = $("#btnExportFeedback");
+  const recentFeedback = $("#recentFeedback");
+  const feedbackSaveStatus = $("#feedbackSaveStatus");
+
+  const statViews = $("#statViews");
+  const statLaunches = $("#statLaunches");
+  const statFeedback = $("#statFeedback");
+  const btnResetAnalytics = $("#btnResetAnalytics");
+
+  // Tabs / navigation hooks (optional)
+  const tabButtons = $$(".tab[data-tab]");
+  const navButtons = $$("[data-nav]");
+
+  // -----------------------------
+  // Defaults
+  // -----------------------------
+  const STARTER_HTML = `<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap sample</title>
+  <title>Prototype Starter</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:24px;background:#0b0f14;color:#e8eef7}
-    .card{max-width:720px;margin:0 auto;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.06)}
-    button{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#e8eef7;cursor:pointer}
-    button:hover{background:rgba(255,255,255,.12)}
+    :root { color-scheme: dark; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#0f1115; color:#e6e6e6; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 28px 18px; }
+    .card { border:1px solid #2a2f3a; border-radius:14px; padding:18px; background:#161a22; }
+    h1 { margin:0 0 6px; font-size: 22px; }
+    p { margin:0 0 14px; color:#9aa0aa; }
+    button { background:#ff7a18; color:#000; border:0; padding:12px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
+    .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .pill { border:1px solid #2a2f3a; color:#9aa0aa; padding:8px 10px; border-radius:999px; }
+    .meter { height:10px; background:#0c0f14; border:1px solid #2a2f3a; border-radius:999px; overflow:hidden; flex: 1; min-width: 220px;}
+    .meter > div { height:100%; width:35%; background:rgba(255,122,24,0.55); }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1 style="margin:0 0 8px 0;font-size:20px">Sample prototype</h1>
-    <p style="margin:0 0 12px 0;opacity:.9">Edit this HTML, then hit <b>Run</b> in VibeSnap.</p>
-    <button id="b">Click me</button>
-    <p id="out" style="margin:12px 0 0 0;opacity:.9"></p>
+  <div class="wrap">
+    <div class="card">
+      <h1>Interactive prototype starter</h1>
+      <p>Replace this content with your own. Keep it self contained for easy sharing and testing.</p>
+
+      <div class="row">
+        <button id="btn">Click me</button>
+        <span class="pill" id="state">State: idle</span>
+        <div class="meter" aria-label="Progress"><div id="bar"></div></div>
+      </div>
+    </div>
   </div>
+
   <script>
-    const b=document.getElementById('b');
-    const out=document.getElementById('out');
-    let n=0;
-    b.addEventListener('click',()=>{ n++; out.textContent='Clicks: '+n; });
+    const btn = document.getElementById("btn");
+    const state = document.getElementById("state");
+    const bar = document.getElementById("bar");
+    let on = false;
+
+    btn.addEventListener("click", () => {
+      on = !on;
+      state.textContent = "State: " + (on ? "active" : "idle");
+      bar.style.width = on ? "85%" : "35%";
+    });
   </script>
+</body>
+</html>`;
+
+  // -----------------------------
+  // Metrics
+  // -----------------------------
+  const metricsDefault = { views: 0, launches: 0, feedback: 0 };
+  const getMetrics = () => safeJsonParse(localStorage.getItem(LS.METRICS), metricsDefault) || metricsDefault;
+  const setMetrics = (m) => localStorage.setItem(LS.METRICS, JSON.stringify(m));
+
+  function renderMetrics() {
+    const m = getMetrics();
+    if (statViews) statViews.textContent = String(m.views ?? 0);
+    if (statLaunches) statLaunches.textContent = String(m.launches ?? 0);
+    if (statFeedback) statFeedback.textContent = String(m.feedback ?? 0);
+  }
+
+  function bumpMetric(key, amount = 1) {
+    const m = getMetrics();
+    m[key] = (m[key] ?? 0) + amount;
+    setMetrics(m);
+    renderMetrics();
+  }
+
+  // Count a "view" once per tab session
+  const SESSION_VIEW_KEY = "vibesnap:session_viewed";
+  if (!sessionStorage.getItem(SESSION_VIEW_KEY)) {
+    sessionStorage.setItem(SESSION_VIEW_KEY, "1");
+    bumpMetric("views", 1);
+  } else {
+    renderMetrics();
+  }
+
+  if (btnResetAnalytics) {
+    btnResetAnalytics.addEventListener("click", () => {
+      localStorage.setItem(LS.METRICS, JSON.stringify(metricsDefault));
+      renderMetrics();
+      toast("Analytics reset");
+    });
+  }
+
+  // -----------------------------
+  // Autosave draft
+  // -----------------------------
+  function setSaveStatus(text) {
+    if (saveStatus) saveStatus.textContent = text;
+  }
+
+  function loadDraft() {
+    const draft = localStorage.getItem(LS.DRAFT_HTML) || "";
+    if (codeInput && draft.trim()) {
+      codeInput.value = draft;
+      setSaveStatus("Draft restored");
+    } else {
+      setSaveStatus("Nothing saved");
+    }
+  }
+
+  const saveDraftDebounced = debounce(() => {
+    if (!codeInput) return;
+    const val = (codeInput.value || "").trim();
+    if (!val) {
+      localStorage.removeItem(LS.DRAFT_HTML);
+      setSaveStatus("Nothing saved");
+      return;
+    }
+    localStorage.setItem(LS.DRAFT_HTML, val);
+    setSaveStatus("Saved locally");
+  }, 350);
+
+  if (codeInput) {
+    codeInput.addEventListener("input", () => {
+      saveDraftDebounced();
+    });
+  }
+
+  if (btnClearSaved) {
+    btnClearSaved.addEventListener("click", () => {
+      localStorage.removeItem(LS.DRAFT_HTML);
+      if (codeInput) codeInput.value = "";
+      setSaveStatus("Nothing saved");
+      toast("Saved draft cleared");
+    });
+  }
+
+  // -----------------------------
+  // Launch sandboxed preview
+  // -----------------------------
+  function setLoading(isLoading) {
+    if (!btnLaunch) return;
+    const label = btnLaunch.querySelector(".btn-label");
+    if (isLoading) {
+      btnLaunch.classList.add("is-loading");
+      btnLaunch.disabled = true;
+      if (label) label.textContent = "Thinking…";
+    } else {
+      btnLaunch.classList.remove("is-loading");
+      btnLaunch.disabled = false;
+      if (label) label.textContent = "Launch preview";
+    }
+  }
+
+  function normalizeHtmlInput(raw) {
+    const s = (raw || "").trim();
+    if (!s) return "";
+    // If user pasted fragment, wrap it into a full HTML doc
+    const looksLikeFull = /<html[\s>]/i.test(s) || /<!doctype/i.test(s);
+    if (looksLikeFull) return s;
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prototype</title>
+  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:18px}</style>
+</head>
+<body>
+${s}
 </body>
 </html>`;
   }
 
-  // ---------- Share via URL fragment (client-only) ----------
-  // Not meant for large prototypes. Keeps it lightweight + private.
-  function encodeForHash(s) {
-    // compress-ish using URI-safe base64
-    const utf8 = new TextEncoder().encode(s);
-    let bin = '';
-    utf8.forEach(b => bin += String.fromCharCode(b));
-    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  function setPreview(htmlText) {
+    if (!previewFrame) return;
+    previewFrame.srcdoc = htmlText;
   }
-  function decodeFromHash(s) {
-    const pad = s.length % 4 ? '='.repeat(4 - (s.length % 4)) : '';
-    const b64 = (s + pad).replace(/-/g,'+').replace(/_/g,'/');
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+
+  function launch() {
+    if (!codeInput) return;
+    const raw = codeInput.value;
+    const normalized = normalizeHtmlInput(raw);
+    if (!normalized) {
+      toast("Paste a complete HTML file first");
+      return;
+    }
+
+    setLoading(true);
+
+    // small delay for perceived responsiveness
+    const delay = 350 + Math.floor(Math.random() * 350);
+    setTimeout(() => {
+      setPreview(normalized);
+      bumpMetric("launches", 1);
+      setLoading(false);
+      toast("Preview launched");
+    }, delay);
+  }
+
+  if (btnLaunch) btnLaunch.addEventListener("click", launch);
+
+  if (btnReload) {
+    btnReload.addEventListener("click", () => {
+      if (!codeInput) return;
+      const normalized = normalizeHtmlInput(codeInput.value);
+      setPreview(normalized);
+      toast("Reloaded");
+    });
+  }
+
+  // Cmd/Ctrl+Enter launches
+  if (codeInput) {
+    codeInput.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        launch();
+      }
+    });
+  }
+
+  // -----------------------------
+  // Editor actions
+  // -----------------------------
+  if (btnPasteStarter) {
+    btnPasteStarter.addEventListener("click", () => {
+      if (!codeInput) return;
+      codeInput.value = STARTER_HTML;
+      localStorage.setItem(LS.DRAFT_HTML, STARTER_HTML);
+      setSaveStatus("Saved locally");
+      toast("Starter pasted");
+      codeInput.focus();
+    });
+  }
+
+  if (btnClearCode) {
+    btnClearCode.addEventListener("click", () => {
+      if (!codeInput) return;
+      codeInput.value = "";
+      toast("Cleared");
+      codeInput.focus();
+      saveDraftDebounced();
+    });
+  }
+
+  if (btnDownloadHtml) {
+    btnDownloadHtml.addEventListener("click", () => {
+      const raw = codeInput ? codeInput.value : "";
+      const normalized = normalizeHtmlInput(raw);
+      if (!normalized) {
+        toast("Nothing to download yet");
+        return;
+      }
+      downloadText("prototype.html", normalized);
+      toast("Downloaded");
+    });
+  }
+
+  // -----------------------------
+  // Share link (static-mode)
+  // -----------------------------
+  function encodeToHash(text) {
+    // Base64url encode for hash
+    const utf8 = new TextEncoder().encode(text);
+    let bin = "";
+    utf8.forEach((b) => (bin += String.fromCharCode(b)));
+    const b64 = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    return b64;
+  }
+
+  function decodeFromHash(b64url) {
+    const b64 = (b64url || "").replace(/-/g, "+").replace(/_/g, "/");
+    const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+    const bin = atob(b64 + pad);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
     return new TextDecoder().decode(bytes);
   }
 
-  function buildShareUrl(html) {
-    const max = 120000; // keep URLs sane
-    if (html.length > max) return null;
-    const payload = encodeForHash(html);
-    const base = `${location.origin}${location.pathname}`;
-    return `${base}#p=${payload}`;
+  function buildShareUrlFromCode(code) {
+    const normalized = normalizeHtmlInput(code);
+    const hash = encodeToHash(normalized);
+    const url = new URL(window.location.href);
+    url.hash = `code=${hash}`;
+    // strip query noise if any
+    return url.toString();
   }
 
-  function tryLoadSharedPrototype() {
-    const h = location.hash || '';
-    const m = h.match(/#p=([A-Za-z0-9\-_]+)/);
-    if (!m) return false;
+  function hydrateFromHash() {
+    const h = window.location.hash || "";
+    const m = h.match(/code=([A-Za-z0-9\-_]+)/);
+    if (!m) return;
     try {
-      const html = decodeFromHash(m[1]);
-      if (html && html.includes('<')) {
-        setCurrentCode(html);
-        runInFrame(html);
-        return true;
+      const decoded = decodeFromHash(m[1]);
+      if (codeInput) {
+        codeInput.value = decoded;
+        localStorage.setItem(LS.DRAFT_HTML, decoded);
+        setSaveStatus("Loaded from link");
+        toast("Loaded shared prototype");
+        setTimeout(() => launch(), 200);
       }
-    } catch {}
-    return false;
-  }
-
-  // ---------- Feedback (local only) ----------
-  const modal = $('modalFeedback');
-  const feedbackText = $('feedbackText');
-  const feedbackList = $('feedbackList');
-  const feedbackSaveNote = $('feedbackSaveNote');
-  const btnSubmitFeedback = $('btnSubmitFeedback');
-  const btnClearFeedback = $('btnClearFeedback');
-  const btnExportFeedback = $('btnExportFeedback');
-
-  const FEED_KEY = 'vibesnap:feedback_v1';
-  function readFeedback() {
-    try { return JSON.parse(localStorage.getItem(FEED_KEY) || '[]'); } catch { return []; }
-  }
-  function writeFeedback(items) {
-    try { localStorage.setItem(FEED_KEY, JSON.stringify(items)); } catch {}
-  }
-  function renderFeedback() {
-    if (!feedbackList) return;
-    const items = readFeedback();
-    feedbackList.innerHTML = '';
-    if (!items.length) {
-      feedbackList.innerHTML = `<div class="empty">No feedback yet.</div>`;
-      return;
-    }
-    items.slice().reverse().forEach(it => {
-      const div = document.createElement('div');
-      div.className = 'fb';
-      div.innerHTML = `
-        <div class="fb-meta">${new Date(it.ts).toLocaleString()}</div>
-        <div class="fb-text"></div>
-      `;
-      div.querySelector('.fb-text').textContent = it.text;
-      feedbackList.appendChild(div);
-    });
-  }
-  function openModal() {
-    if (!modal) return;
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden','false');
-    renderFeedback();
-    if (feedbackText) feedbackText.focus();
-  }
-  function closeModal() {
-    if (!modal) return;
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden','true');
-  }
-
-  // ---------- Import helper ----------
-  const importDrop = $('importDrop');
-  const fileInline = $('fileInline');
-  const fileHtml = $('fileHtml');
-  const fileCss = $('fileCss');
-  const fileJs = $('fileJs');
-  const stateInline = $('stateInline');
-  const stateHtml = $('stateHtml');
-  const stateCss = $('stateCss');
-  const stateJs = $('stateJs');
-  const importNotice = $('importNotice');
-  const assembledOut = $('assembledOut');
-  const btnAssemble = $('btnAssemble');
-  const btnRunImport = $('btnRunImport');
-  const rowInline = $('rowInline');
-
-  const fileState = {
-    inline: null,
-    html: null,
-    css: null,
-    js: null,
-  };
-
-  function setBadge(el, ok, labelOk, labelMissing) {
-    if (!el) return;
-    el.classList.toggle('ok', !!ok);
-    el.classList.toggle('missing', !ok);
-    el.textContent = ok ? labelOk : labelMissing;
-  }
-
-  function toast(msg) {
-    if (!importNotice) return;
-    importNotice.textContent = msg;
-    importNotice.classList.add('show');
-    window.setTimeout(() => importNotice.classList.remove('show'), 1600);
-  }
-
-  async function readFileText(file) {
-    return await file.text();
-  }
-
-  function updateImportUI() {
-    setBadge(stateInline, !!fileState.inline, 'Inline HTML ✓', 'Inline HTML');
-    setBadge(stateHtml, !!fileState.html, 'HTML ✓', 'HTML');
-    setBadge(stateCss, !!fileState.css, 'CSS ✓', 'CSS');
-    setBadge(stateJs, !!fileState.js, 'JS ✓', 'JS');
-
-    // If inline provided, treat split as optional.
-    const canAssemble = !!fileState.inline || !!fileState.html;
-    if (btnAssemble) btnAssemble.disabled = !canAssemble;
-    if (btnRunImport) btnRunImport.disabled = !canAssemble;
-
-    if (rowInline) rowInline.classList.toggle('has-file', !!fileState.inline);
-  }
-
-  async function handleFiles(files) {
-    const list = Array.from(files || []);
-    if (!list.length) return;
-
-    // If user drops one HTML file, prefer inline.
-    for (const f of list) {
-      const name = f.name.toLowerCase();
-      if (name.endsWith('.html') || name.endsWith('.htm')) {
-        // If there are multiple files, treat as split if we already have HTML and not inline
-        // but simplest: if only one html and no css/js => inline
-        if (list.length === 1 || (!list.some(x => x.name.toLowerCase().endsWith('.css') || x.name.toLowerCase().endsWith('.js')))) {
-          fileState.inline = await readFileText(f);
-          toast('HTML file uploaded');
-          continue;
-        } else {
-          fileState.html = await readFileText(f);
-          toast('HTML file uploaded');
-          continue;
-        }
-      }
-      if (name.endsWith('.css')) { fileState.css = await readFileText(f); toast('CSS file uploaded'); continue; }
-      if (name.endsWith('.js')) { fileState.js = await readFileText(f); toast('JS file uploaded'); continue; }
-      // ignore others
-    }
-    updateImportUI();
-  }
-
-  function assembleFromSplit(html, css, js) {
-    let out = safeText(html);
-    const hasHead = /<\/head\s*>/i.test(out);
-    const hasBodyClose = /<\/body\s*>/i.test(out);
-
-    const styleTag = css ? `\n<style>\n${css}\n</style>\n` : '';
-    const scriptTag = js ? `\n<script>\n${js}\n<\/script>\n` : '';
-
-    if (styleTag) {
-      if (hasHead) out = out.replace(/<\/head\s*>/i, styleTag + '</head>');
-      else out = out.replace(/<html[^>]*>/i, m => m + '\n<head>' + styleTag + '</head>\n');
-    }
-    if (scriptTag) {
-      if (hasBodyClose) out = out.replace(/<\/body\s*>/i, scriptTag + '</body>');
-      else out = out + scriptTag;
-    }
-    return out;
-  }
-
-  function assemble() {
-    const inline = fileState.inline;
-    const html = fileState.html;
-    const css = fileState.css;
-    const js = fileState.js;
-
-    let result = '';
-    if (inline) {
-      result = inline;
-    } else if (html) {
-      result = assembleFromSplit(html, css, js);
-    } else {
-      result = '';
-    }
-
-    if (assembledOut) assembledOut.value = result;
-    return result;
-  }
-
-  // ---------- Prompt builder ----------
-  const pbIdea = $('pbIdea');
-  const pbGoal = $('pbGoal');
-  const pbScreens = $('pbScreens');
-  const pbInteractions = $('pbInteractions');
-  const pbStyle = $('pbStyle');
-  const pbNotes = $('pbNotes');
-  const promptOut = $('promptOut');
-  const btnCopyPrompt = $('btnCopyPrompt');
-
-  function buildPrompt() {
-    const idea = safeText(pbIdea && pbIdea.value).trim();
-    const goal = safeText(pbGoal && pbGoal.value).trim();
-    const screens = safeText(pbScreens && pbScreens.value).trim();
-    const interactions = safeText(pbInteractions && pbInteractions.value).trim();
-    const style = safeText(pbStyle && pbStyle.value).trim();
-    const notes = safeText(pbNotes && pbNotes.value).trim();
-
-    const lines = [];
-    lines.push("Make a single self-contained HTML file that includes:");
-    lines.push("- Inline CSS in a <style> tag");
-    lines.push("- Inline JavaScript in a <script> tag");
-    lines.push("- No external libraries");
-    lines.push("- No external assets");
-    lines.push("- No build steps");
-    lines.push("- Works by opening the HTML file directly");
-    lines.push("");
-    if (idea) lines.push(`App concept: ${idea}`);
-    if (goal) lines.push(`Primary goal: ${goal}`);
-    if (screens) lines.push(`Key screens: ${screens}`);
-    if (interactions) lines.push(`Must-have interaction: ${interactions}`);
-    if (style) lines.push(`Design / tone: ${style}`);
-    if (notes) lines.push(`Notes / constraints: ${notes}`);
-    lines.push("");
-    lines.push("Output ONLY the full HTML code. Do not include explanations.");
-
-    return lines.join('\n');
-  }
-
-  function updatePromptOut() {
-    if (!promptOut) return;
-    promptOut.value = buildPrompt();
-  }
-
-  async function copyToClipboard(text) {
-    const t = safeText(text);
-    try {
-      await navigator.clipboard.writeText(t);
-      return true;
-    } catch {
-      // fallback
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = t;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-        return true;
-      } catch {
-        return false;
-      }
+    } catch (e) {
+      // ignore
     }
   }
 
-  // ---------- Wire up ----------
-  function initPreview() {
-    if (btnSample) btnSample.addEventListener('click', () => {
-      setCurrentCode(sampleHTML());
-      setSaveStatus('Sample loaded');
-      runInFrame(getCurrentCode());
-    });
-
-    if (btnRun) btnRun.addEventListener('click', () => runInFrame(getCurrentCode()));
-
-    if (btnSave) btnSave.addEventListener('click', () => {
-      try {
-        localStorage.setItem(LS_KEY, getCurrentCode());
-        setSaveStatus('Saved locally');
-      } catch {
-        setSaveStatus('Save failed');
-      }
-    });
-
-    if (btnCreateShare) btnCreateShare.addEventListener('click', async () => {
-      const html = getCurrentCode();
-      const url = buildShareUrl(html);
-      if (!url) {
-        setSaveStatus('Prototype too large for URL share');
+  if (btnCreateShare && shareLink) {
+    btnCreateShare.addEventListener("click", () => {
+      const raw = codeInput ? codeInput.value : "";
+      const normalized = normalizeHtmlInput(raw);
+      if (!normalized) {
+        toast("Paste HTML first");
         return;
       }
-      if (shareLink) shareLink.value = url;
-      setSaveStatus('Share link created');
+
+      const url = buildShareUrlFromCode(normalized);
+
+      // Gentle warning if too large (URL limits vary)
+      if (url.length > 65000) {
+        toast("Prototype too large for a link. Download instead.");
+      }
+
+      shareLink.value = url;
+      toast("Share link created");
     });
-
-    if (btnCopyShare) btnCopyShare.addEventListener('click', async () => {
-      if (!shareLink) return;
-      const ok = await copyToClipboard(shareLink.value);
-      setSaveStatus(ok ? 'Link copied' : 'Copy failed');
-    });
-
-    if (btnCopyShareText) btnCopyShareText.addEventListener('click', async () => {
-      if (!shareText) return;
-      const ok = await copyToClipboard(shareText.value);
-      setSaveStatus(ok ? 'Copy copied' : 'Copy failed');
-    });
-
-    if (btnOpenFeedback) btnOpenFeedback.addEventListener('click', openModal);
-
-    // restore last saved unless a share loaded it
-    const loadedShare = tryLoadSharedPrototype();
-    if (!loadedShare) {
-      try {
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved && saved.includes('<')) setCurrentCode(saved);
-      } catch {}
-    }
-    if (codeInput && !codeInput.value.trim()) setCurrentCode(sampleHTML());
-    runInFrame(getCurrentCode());
   }
 
-  function initFeedback() {
-    if (!modal) return;
-
-    // close on overlay click / escape
-    modal.addEventListener('click', (e) => {
-      const target = e.target;
-      if (target && target.getAttribute && target.getAttribute('data-close') === 'true') closeModal();
-    });
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !modal.hidden) closeModal();
-    });
-
-    if (btnSubmitFeedback) btnSubmitFeedback.addEventListener('click', () => {
-      const text = safeText(feedbackText && feedbackText.value).trim();
-      if (!text) return;
-      const items = readFeedback();
-      items.push({ ts: Date.now(), text });
-      writeFeedback(items);
-      if (feedbackText) feedbackText.value = '';
-      renderFeedback();
-      if (feedbackSaveNote) {
-        feedbackSaveNote.textContent = 'Saved locally';
-        window.setTimeout(() => feedbackSaveNote.textContent = '', 1200);
+  if (btnCopyShareLink && shareLink) {
+    btnCopyShareLink.addEventListener("click", async () => {
+      const val = (shareLink.value || "").trim();
+      if (!val) return toast("Create a share link first");
+      try {
+        await navigator.clipboard.writeText(val);
+        toast("Link copied");
+      } catch {
+        toast("Copy failed (browser blocked)");
       }
     });
+  }
 
-    if (btnClearFeedback) btnClearFeedback.addEventListener('click', () => {
-      writeFeedback([]);
-      renderFeedback();
-    });
-
-    if (btnExportFeedback) btnExportFeedback.addEventListener('click', async () => {
-      const items = readFeedback();
-      const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'vibesnap-feedback.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+  if (btnCopyShareText && shareLink) {
+    btnCopyShareText.addEventListener("click", async () => {
+      const val = (shareLink.value || "").trim();
+      if (!val) return toast("Create a share link first");
+      const msg = `Quick prototype feedback?\n\nOpen this and try it:\n${val}\n\nThen reply with:\n1) useful / not useful\n2) what confused you\n3) one thing to improve`;
+      try {
+        await navigator.clipboard.writeText(msg);
+        toast("Share text copied");
+      } catch {
+        toast("Copy failed (browser blocked)");
+      }
     });
   }
 
-  function initImport() {
-    updateImportUI();
+  if (btnResetLink && shareLink) {
+    btnResetLink.addEventListener("click", () => {
+      shareLink.value = "";
+      // leave hash as-is (user may want to keep it)
+      toast("Share field cleared");
+    });
+  }
 
-    // file pickers
-    if (fileInline) fileInline.addEventListener('change', () => handleFiles(fileInline.files));
-    if (fileHtml) fileHtml.addEventListener('change', () => handleFiles(fileHtml.files));
-    if (fileCss) fileCss.addEventListener('change', () => handleFiles(fileCss.files));
-    if (fileJs) fileJs.addEventListener('change', () => handleFiles(fileJs.files));
+  if (btnOpenNewTab && shareLink) {
+    btnOpenNewTab.addEventListener("click", () => {
+      const val = (shareLink.value || "").trim();
+      if (!val) return toast("Create a share link first");
+      window.open(val, "_blank", "noopener,noreferrer");
+    });
+  }
 
-    // dropzone
-    if (importDrop) {
-      const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
-      ['dragenter','dragover','dragleave','drop'].forEach(evt => importDrop.addEventListener(evt, prevent));
-      importDrop.addEventListener('dragenter', () => importDrop.classList.add('is-drag'));
-      importDrop.addEventListener('dragleave', () => importDrop.classList.remove('is-drag'));
-      importDrop.addEventListener('drop', (e) => {
-        importDrop.classList.remove('is-drag');
-        handleFiles(e.dataTransfer && e.dataTransfer.files);
-      });
+  // -----------------------------
+  // Feedback (local-first)
+  // -----------------------------
+  const feedbackDefault = [];
+  const getFeedback = () => safeJsonParse(localStorage.getItem(LS.FEEDBACK), feedbackDefault) || feedbackDefault;
+  const setFeedback = (arr) => localStorage.setItem(LS.FEEDBACK, JSON.stringify(arr));
+
+  function renderFeedback() {
+    if (!recentFeedback) return;
+    const arr = getFeedback();
+    recentFeedback.innerHTML = "";
+
+    if (!arr.length) {
+      recentFeedback.innerHTML = `<div class="muted tiny">No feedback yet.</div>`;
+      return;
     }
 
-    if (btnAssemble) btnAssemble.addEventListener('click', () => {
-      const html = assemble();
-      if (html) toast('Assembled');
-      else toast('Add an HTML file to assemble');
-    });
+    const recent = arr.slice(-6).reverse();
+    for (const item of recent) {
+      const div = document.createElement("div");
+      div.className = "fb-item";
+      div.innerHTML = `
+        <div class="fb-meta">
+          <span class="mini-pill">${item.sentiment}</span>
+          <span class="muted tiny">${new Date(item.ts).toLocaleString()}</span>
+        </div>
+        <div class="fb-text">${escapeHtml(item.text || "")}</div>
+      `;
+      recentFeedback.appendChild(div);
+    }
+  }
 
-    if (btnRunImport) btnRunImport.addEventListener('click', () => {
-      const html = assemble();
-      if (!html) { toast('Add an HTML file to run'); return; }
-      // Push to preview tab for a smoother flow
-      setCurrentCode(html);
-      runInFrame(html);
-      setActiveTab('preview');
-      setSaveStatus('Imported into preview');
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function setFeedbackStatus(msg) {
+    if (!feedbackSaveStatus) return;
+    feedbackSaveStatus.textContent = msg;
+    feedbackSaveStatus.classList.add("show");
+    clearTimeout(setFeedbackStatus._t);
+    setFeedbackStatus._t = setTimeout(() => feedbackSaveStatus.classList.remove("show"), 1800);
+  }
+
+  const sentimentButtons = $$("[data-sentiment]");
+  let currentSentiment = "useful";
+
+  function setSentiment(val) {
+    currentSentiment = val;
+    sentimentButtons.forEach((b) => {
+      const on = b.getAttribute("data-sentiment") === val;
+      b.classList.toggle("is-selected", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
 
-  function initPrompt() {
-    // live update
-    [pbIdea,pbGoal,pbScreens,pbInteractions,pbStyle,pbNotes].forEach(el => {
-      if (!el) return;
-      el.addEventListener('input', updatePromptOut);
+  if (sentimentButtons.length) {
+    sentimentButtons.forEach((b) => {
+      b.addEventListener("click", () => setSentiment(b.getAttribute("data-sentiment")));
     });
-    updatePromptOut();
+    // default
+    setSentiment(sentimentButtons[0].getAttribute("data-sentiment"));
+  }
 
-    if (btnCopyPrompt) btnCopyPrompt.addEventListener('click', async () => {
-      const ok = await copyToClipboard(promptOut ? promptOut.value : '');
-      if (btnCopyPrompt) btnCopyPrompt.textContent = ok ? 'Copied' : 'Copy failed';
-      window.setTimeout(() => { if (btnCopyPrompt) btnCopyPrompt.textContent = 'Copy prompt'; }, 900);
+  if (btnSubmitFeedback) {
+    btnSubmitFeedback.addEventListener("click", () => {
+      const text = (feedbackText ? feedbackText.value : "").trim();
+      if (!text) {
+        toast("Write feedback first");
+        return;
+      }
+
+      const arr = getFeedback();
+      arr.push({
+        ts: nowISO(),
+        sentiment: currentSentiment || "useful",
+        text,
+      });
+      setFeedback(arr);
+
+      if (feedbackText) feedbackText.value = "";
+      bumpMetric("feedback", 1);
+      renderFeedback();
+      setFeedbackStatus("Saved locally");
+      toast("Feedback saved");
     });
   }
 
-  // ---------- Boot ----------
-  function boot() {
-    initTabs();
-    initPreview();
-    initPrompt();
-    initImport();
-    initFeedback();
-
-    // defensively hide panels not wired (if any)
-    Object.values(panels).forEach(p => { if (p) p.hidden = true; });
-    // setActiveTab will unhide the right one
-    const hash = (location.hash || '').replace('#','').trim().toLowerCase();
-    if (hash === 'prompt' || hash === 'import' || hash === 'preview') setActiveTab(hash);
-    else setActiveTab('preview');
+  if (btnClearFeedback) {
+    btnClearFeedback.addEventListener("click", () => {
+      localStorage.removeItem(LS.FEEDBACK);
+      renderFeedback();
+      setFeedbackStatus("Cleared");
+      toast("Feedback cleared");
+    });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  if (btnExportFeedback) {
+    btnExportFeedback.addEventListener("click", () => {
+      const arr = getFeedback();
+      const payload = JSON.stringify(arr, null, 2);
+      downloadText("vibesnap_feedback.json", payload);
+      toast("Exported feedback");
+    });
+  }
+
+  // -----------------------------
+  // Tabs + pages
+  // -----------------------------
+  function showPage(which) {
+    if (!pageApp || !pagePricing) return;
+
+    if (which === "pricing") {
+      pageApp.classList.remove("page-active");
+      pagePricing.classList.add("page-active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    pagePricing.classList.remove("page-active");
+    pageApp.classList.add("page-active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  navButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-nav");
+      if (!target) return;
+      showPage(target);
+    });
+  });
+
+  function setActiveTab(tabKey) {
+    if (!tabButtons.length) return;
+    tabButtons.forEach((b) => b.classList.toggle("is-active", b.getAttribute("data-tab") === tabKey));
+
+    // In this build, preview is the main workspace.
+    // Prompt builder / import helper UI are staged; for now we keep it honest.
+    if (tabKey === "prompt") toast("Prompt builder UI is next. For now: paste your AI output into Prototype HTML.");
+    if (tabKey === "import") toast("Import helper UI is next. For now: paste a single-file HTML prototype.");
+  }
+
+  tabButtons.forEach((b) => {
+    b.addEventListener("click", () => setActiveTab(b.getAttribute("data-tab")));
+  });
+
+  // -----------------------------
+  // Init
+  // -----------------------------
+  loadDraft();
+  renderFeedback();
+  hydrateFromHash();
+
 })();
