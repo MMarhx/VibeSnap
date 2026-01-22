@@ -2,110 +2,202 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap — Prompt builder</title>
-  <meta name="description" content="Generate a prompt that asks your AI tool to export a single self-contained HTML file." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VibeSnap • Prompt Builder</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="index.html" aria-label="VibeSnap home">
-        <span class="mark" aria-hidden="true"></span>
-        <span class="word">vibesnap</span>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="VibeSnap">
+        <span class="brandMark" aria-hidden="true">🔥</span>
+        <span class="brandText">vibesnap</span>
       </a>
-      <nav class="nav" aria-label="Primary">
-        <a class="pill" href="index.html">Workspace</a>
-        <a class="pill is-active" href="prompt.html">Prompt builder</a>
-        <a class="pill" href="pricing.html">Pricing</a>
-      </nav>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <h1>Prompt builder</h1>
-      <p>Generate a copy‑paste prompt that tells your AI tool to export a <b>single self-contained HTML file</b> you can drag into VibeSnap.</p>
-      <p class="privacy">Copy → paste into your AI tool → ask it to export one .html file → drag that file into VibeSnap.</p>
+      <nav class="nav">
+        <a class="navLink" href="index.html">Workspace</a>
+        <a class="navLink navLink--active" href="prompt.html" aria-current="page">Prompt Builder</a>
+        <a class="navLink" href="pricing.html">Pricing</a>
+      </nav>
+    </header>
+
+    <section class="hero hero--tight">
+      <h1 class="h1">Prompt Builder</h1>
+      <p class="subhead">
+        Generate a prompt for your AI tool that outputs a <strong>single-file HTML prototype</strong>
+        (with <strong>inline CSS + JS</strong>) so you can drag it into VibeSnap.
+      </p>
+      <ol class="flow">
+        <li><span class="chip">1</span> Copy prompt</li>
+        <li><span class="chip">2</span> Paste into your AI tool</li>
+        <li><span class="chip">3</span> Export one HTML file</li>
+        <li><span class="chip">4</span> Drag into Workspace</li>
+      </ol>
     </section>
 
-    <section class="card" aria-label="Prompt builder">
-      <div class="card-inner">
-        <div class="card-head">
-          <div>
-            <h2 class="card-title">Generate a prototype-ready prompt</h2>
-            <p class="card-sub">Fill in what you’re building. Keep it small and testable.</p>
-          </div>
-          <div class="row">
-            <button class="btn small" id="btnPromptReset" type="button">Reset</button>
-            <button class="btn small primary" id="btnCopyPrompt" type="button">Copy prompt</button>
-          </div>
+    <section class="grid">
+      <section class="card card--wide" aria-labelledby="pbTitle">
+        <div class="cardHead">
+          <h2 id="pbTitle" class="h2">Describe what you want to test</h2>
+          <div class="meta">The AI will return a single HTML file</div>
         </div>
 
-        <div class="grid" style="grid-template-columns: 1fr 1fr;">
-          <div class="field">
-            <label class="label" for="pbWhat">What are you building?</label>
-            <input class="input" id="pbWhat" placeholder="Example: spending tracker" />
-          </div>
+        <label class="label" for="ideaInput">Your idea</label>
+        <textarea id="ideaInput" class="textarea" placeholder="Example: A spending tracker with categories, totals, and a simple chart."></textarea>
 
-          <div class="field">
-            <label class="label" for="pbFor">Who is it for?</label>
-            <input class="input" id="pbFor" placeholder="Example: people splitting bills" />
-          </div>
-
-          <div class="field">
-            <label class="label" for="pbGoal">Primary goal</label>
-            <input class="input" id="pbGoal" placeholder="Example: log expenses quickly" />
-          </div>
-
-          <div class="field">
-            <label class="label" for="pbScreens">Key screens</label>
-            <input class="input" id="pbScreens" placeholder="Dashboard, Add expense, History" />
-          </div>
-
-          <div class="field">
-            <label class="label" for="pbInteractions">Must-have interactions</label>
-            <input class="input" id="pbInteractions" placeholder="Add/edit/delete entries" />
-          </div>
-
-          <div class="field">
-            <label class="label" for="pbData">Data to store</label>
-            <input class="input" id="pbData" placeholder="amount, category, date, notes" />
-          </div>
-
-          <div class="field" style="grid-column:1/-1">
-            <label class="label" for="pbStyle">Style</label>
-            <input class="input" id="pbStyle" placeholder="Clean, modern, dark-mode friendly" />
-            <div class="hint">Tip: ask for realistic empty states, example data, and one meaningful interaction.</div>
-          </div>
-
-          <div class="field" style="grid-column:1/-1">
-            <label class="label" for="pbNotes">Extra notes (optional)</label>
-            <input class="input" id="pbNotes" placeholder="Example: include realistic empty states, sample data, and a tiny 'prototype' label." />
-          </div>
-
-          <div class="field" style="grid-column:1/-1">
-            <label class="label" for="pbOutput">Generated prompt</label>
-            <textarea class="textarea" id="pbOutput" style="min-height:260px" readonly></textarea>
-            <div class="hint">Make sure the AI exports <b>one</b> HTML file with inline CSS + JS, and no external assets.</div>
-          </div>
+        <div class="toolbar">
+          <button class="btn btn--primary" id="btnBuildPrompt" type="button">Build prompt</button>
+          <button class="btn" id="btnCopyBuiltPrompt" type="button" disabled>Copy</button>
+          <a class="btn btn--ghost" href="index.html">Go to Workspace</a>
         </div>
-      </div>
+
+        <label class="label" for="builtPrompt">Prompt</label>
+        <textarea id="builtPrompt" class="textarea textarea--mono" readonly
+          placeholder="Your prompt will appear here…"></textarea>
+
+        <div class="callout subtle">
+          Tip: Tell the AI to output <strong>only</strong> the full HTML code. No explanations.
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="advTitle">
+        <div class="cardHead">
+          <h2 id="advTitle" class="h2">Advanced</h2>
+          <div class="meta">Split files (optional)</div>
+        </div>
+
+        <p class="hint">
+          If you prefer separate files, ask the AI for:
+        </p>
+        <ul class="bullets">
+          <li><code>index.html</code> (no inline CSS/JS)</li>
+          <li><code>styles.css</code></li>
+          <li><code>app.js</code></li>
+        </ul>
+
+        <p class="hint">
+          You can still import split files in Workspace (Import helper).
+        </p>
+
+        <div class="toolbar">
+          <button class="btn" id="btnCopySplitPrompt" type="button">Copy split-files prompt</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="trustTitle">
+        <div class="cardHead">
+          <h2 id="trustTitle" class="h2">Trust</h2>
+          <div class="meta">Local-first</div>
+        </div>
+        <p class="hint">
+          Your ideas stay yours. VibeSnap does not inspect, train on, or store your content.
+          Nothing is saved remotely.
+        </p>
+      </section>
     </section>
 
     <footer class="footer">
-      <div class="wrap">
-        <span>vibesnap.xyz</span>
-        <span>Local-first. Privacy-respecting.</span>
-      </div>
+      <span>vibesnap.xyz</span>
+      <span class="dot" aria-hidden="true">•</span>
+      <span>prompt to prototype</span>
     </footer>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
-    <div class="title" id="toastTitle">Copied</div>
-    <div class="msg" id="toastMsg">Prompt copied to clipboard.</div>
-  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
+  <script>
+    // Lightweight page-only logic (kept tiny; core utilities live in app.js)
+    const ideaInput = document.getElementById('ideaInput');
+    const builtPrompt = document.getElementById('builtPrompt');
+    const btnBuild = document.getElementById('btnBuildPrompt');
+    const btnCopy = document.getElementById('btnCopyBuiltPrompt');
+    const btnCopySplit = document.getElementById('btnCopySplitPrompt');
+
+    function toast(msg){
+      const t = document.getElementById('toast');
+      if(!t) return;
+      t.textContent = msg;
+      t.classList.add('toast--show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(()=>t.classList.remove('toast--show'), 2200);
+    }
+
+    function makeSingleFilePrompt(idea){
+      const safe = (idea || '').trim() || 'An interactive prototype to validate an idea quickly.';
+      return [
+        'Create a single self-contained HTML file that includes:',
+        '- Inline CSS in a <style> tag',
+        '- Inline JavaScript in a <script> tag',
+        '- No external libraries',
+        '- No external assets',
+        '- Works by opening the HTML file directly',
+        '',
+        'App to build:',
+        safe,
+        '',
+        'Requirements:',
+        '- Clean, modern UI (dark mode friendly)',
+        '- Include realistic empty states and example data',
+        '- Include at least one meaningful interaction',
+        '- Add a tiny “prototype” label somewhere',
+        '',
+        'Output ONLY the full HTML code. Do not include explanations.'
+      ].join('\n');
+    }
+
+    function makeSplitFilesPrompt(idea){
+      const safe = (idea || '').trim() || 'A simple prototype for quick validation.';
+      return [
+        'Generate three files: index.html, styles.css, app.js',
+        '',
+        'Project:',
+        safe,
+        '',
+        'Constraints:',
+        '- No external libraries',
+        '- No external assets',
+        '- Must run by opening index.html directly',
+        '',
+        'index.html:',
+        '- Must link to styles.css and app.js',
+        '- No inline CSS or JS',
+        '',
+        'styles.css:',
+        '- Dark tech theme (orange/gray/black), clean spacing, accessible focus states',
+        '',
+        'app.js:',
+        '- Provide example data and at least one meaningful interaction',
+        '',
+        'Output all three files clearly labeled.'
+      ].join('\n');
+    }
+
+    btnBuild.addEventListener('click', ()=>{
+      const p = makeSingleFilePrompt(ideaInput.value);
+      builtPrompt.value = p;
+      btnCopy.disabled = false;
+      toast('Prompt generated');
+    });
+
+    document.getElementById('btnCopyBuiltPrompt').addEventListener('click', async ()=>{
+      if(!builtPrompt.value) return;
+      await navigator.clipboard.writeText(builtPrompt.value);
+      toast('Copied');
+    });
+
+    btnCopySplit.addEventListener('click', async ()=>{
+      const p = makeSplitFilesPrompt(ideaInput.value);
+      await navigator.clipboard.writeText(p);
+      toast('Copied split-files prompt');
+    });
+
+    // Optional: Ctrl/Cmd+Enter builds prompt
+    ideaInput.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+        btnBuild.click();
+      }
+    });
+  </script>
 </body>
 </html>

@@ -1,38 +1,29 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap — Preview</title>
-  <meta name="robots" content="noindex,nofollow" />
+  <meta charset="UTF-8" />
+  <title>VibeSnap Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <div class="preview-shell">
-    <div class="preview-top">
-      <div class="left">
-        <a class="brand" href="index.html" aria-label="Back to workspace">
-          <span class="mark" aria-hidden="true"></span>
-          <span class="word">vibesnap</span>
-        </a>
-        <div class="meta" id="previewMeta">Preview</div>
-      </div>
-      <div class="row">
-        <button class="btn small" id="btnReload" type="button">Reload</button>
-        <a class="btn small" href="index.html">Back to workspace</a>
-      </div>
-    </div>
+<body class="preview-page">
+  <header class="preview-header">
+    <span class="preview-badge">Preview</span>
+    <span class="preview-note">This session is temporary and runs locally.</span>
+  </header>
 
-    <div class="preview-frame">
-      <iframe id="frame" sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts" title="Prototype preview"></iframe>
-    </div>
-  </div>
+  <main class="preview-container">
+    <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
-    <div class="title" id="toastTitle">Loaded</div>
-    <div class="msg" id="toastMsg">Preview ready.</div>
-  </div>
-
-  <script src="app.js"></script>
+  <script>
+    const html = localStorage.getItem("vibesnap_prototype");
+    const frame = document.getElementById("previewFrame");
+    if (html) {
+      frame.srcdoc = html;
+    } else {
+      frame.srcdoc = "<p style='font-family:sans-serif;padding:24px'>No prototype found.</p>";
+    }
+  </script>
 </body>
 </html>
