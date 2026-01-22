@@ -1,183 +1,144 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VibeSnap</title>
-
-  <meta name="description" content="Generate prototypes anywhere. Validate them here." />
-
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VibeSnap</title>
+<meta content="Generate prototypes anywhere. Validate them here." name="description"/>
+<link href="styles.css" rel="stylesheet"/>
 </head>
 <body>
-
-  <!-- Toast -->
-  <div id="toast" class="toast" aria-live="polite"></div>
-
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="logo">
-      <span class="logo-mark">🔥</span>
-      <span class="logo-text">vibesnap</span>
-    </div>
-
-    <nav class="nav">
-      <button data-nav="app" class="nav-link">App</button>
-      <button data-nav="pricing" class="nav-link">Pricing</button>
-    </nav>
-  </header>
-
-  <!-- App Page -->
-  <main id="pageApp" class="page page-active">
-
-    <section class="hero">
-      <h1>Prototype fast. Validate faster.</h1>
-      <p class="subtitle">
+<!-- Toast -->
+<div aria-live="polite" class="toast" id="toast"></div>
+<!-- Top bar -->
+<header class="topbar">
+<div class="logo">
+<span class="logo-mark">🔥</span>
+<span class="logo-text">vibesnap</span>
+</div>
+<nav class="nav">
+<button class="nav-link" data-nav="app">App</button>
+<button class="nav-link" data-nav="pricing">Pricing</button>
+</nav>
+</header>
+<!-- App Page -->
+<main class="page page-active" id="pageApp"><div class="grid"><div class="col col-left"><section class="panel">
+<header class="panel-header">
+<h2>Prototype HTML</h2>
+<div class="panel-actions">
+<button class="btn btn-secondary" id="btnPasteStarter">Paste starter</button>
+<button class="btn btn-ghost" id="btnClearCode">Clear</button>
+</div>
+</header>
+<textarea class="editor" id="codeInput" placeholder="Paste a complete single-file HTML prototype here…" spellcheck="false"></textarea>
+<div class="panel-footer">
+<div class="save-status" id="saveStatus">Nothing saved</div>
+<div class="panel-actions">
+<button class="btn btn-primary" id="btnDownloadHtml">Download HTML</button>
+<button class="btn btn-primary" id="btnLaunch">
+<span class="btn-label">Launch preview</span>
+</button>
+</div>
+</div>
+</section><section class="panel">
+<header class="panel-header">
+<h2>Live preview</h2>
+<div class="panel-actions">
+<button class="btn btn-ghost" id="btnReload">Reload</button>
+</div>
+</header>
+<iframe id="previewFrame" sandbox="allow-scripts allow-forms allow-modals" title="Prototype preview"></iframe>
+</section></div><div class="col col-right"><section class="panel">
+<header class="panel-header">
+<h2>Share for feedback</h2>
+</header>
+<div class="share-row">
+<input class="input" id="shareLink" placeholder="Create a share link…" readonly="" type="text"/>
+<button class="btn btn-primary" id="btnCreateShare">Create</button>
+</div>
+<div class="panel-actions">
+<button class="btn btn-secondary" id="btnCopyShareLink">Copy link</button>
+<button class="btn btn-secondary" id="btnCopyShareText">Copy feedback prompt</button>
+<button class="btn btn-secondary" id="btnOpenNewTab">Open</button>
+<button class="btn btn-ghost" id="btnResetLink">Clear</button>
+</div>
+</section><section class="panel">
+<header class="panel-header">
+<h2>Feedback</h2>
+</header>
+<div class="sentiment">
+<button class="pill sentiment-btn" data-sentiment="useful">Useful</button>
+<button class="pill sentiment-btn" data-sentiment="confusing">Confusing</button>
+<button class="pill sentiment-btn" data-sentiment="needs-work">Needs work</button>
+</div>
+<textarea class="editor" id="feedbackText" placeholder="What worked? What didn’t?"></textarea>
+<div class="panel-actions">
+<button class="btn btn-primary" id="btnSubmitFeedback">Save feedback</button>
+<button class="btn btn-ghost" id="btnClearFeedback">Clear</button>
+<button class="btn btn-ghost" id="btnExportFeedback">Export</button>
+</div>
+<div class="save-status" id="feedbackSaveStatus"></div>
+<div class="feedback-list" id="recentFeedback"></div>
+</section><section class="metrics">
+<div class="metric"><strong id="statViews">0</strong><span>Views</span></div>
+<div class="metric"><strong id="statLaunches">0</strong><span>Launches</span></div>
+<div class="metric"><strong id="statFeedback">0</strong><span>Feedback</span></div>
+<button class="btn btn-ghost" id="btnResetAnalytics">Reset analytics</button>
+</section></div></div>
+<section class="hero">
+<h1>Prototype fast. Validate faster.</h1>
+<p class="subtitle">
         Paste a single-file HTML prototype, launch it instantly, and collect feedback — without setup.
       </p>
-    </section>
+</section>
+<!-- Editor -->
 
-    <!-- Editor -->
-    <section class="panel">
-      <header class="panel-header">
-        <h2>Prototype HTML</h2>
-        <div class="panel-actions">
-          <button id="btnPasteStarter">Paste starter</button>
-          <button id="btnClearCode">Clear</button>
-        </div>
-      </header>
+<!-- Preview -->
 
-      <textarea
-        id="codeInput"
-        placeholder="Paste a complete single-file HTML prototype here…"
-        spellcheck="false"
-      ></textarea>
+<!-- Share -->
 
-      <div class="panel-footer">
-        <div class="save-status" id="saveStatus">Nothing saved</div>
-        <div class="panel-actions">
-          <button id="btnDownloadHtml">Download HTML</button>
-          <button id="btnLaunch">
-            <span class="btn-label">Launch preview</span>
-          </button>
-        </div>
-      </div>
-    </section>
+<!-- Feedback -->
 
-    <!-- Preview -->
-    <section class="panel">
-      <header class="panel-header">
-        <h2>Live preview</h2>
-        <div class="panel-actions">
-          <button id="btnReload">Reload</button>
-        </div>
-      </header>
+<!-- Metrics -->
 
-      <iframe
-        id="previewFrame"
-        sandbox="allow-scripts allow-forms allow-modals"
-        title="Prototype preview"
-      ></iframe>
-    </section>
-
-    <!-- Share -->
-    <section class="panel">
-      <header class="panel-header">
-        <h2>Share for feedback</h2>
-      </header>
-
-      <div class="share-row">
-        <input id="shareLink" type="text" placeholder="Create a share link…" readonly />
-        <button id="btnCreateShare">Create</button>
-      </div>
-
-      <div class="panel-actions">
-        <button id="btnCopyShareLink">Copy link</button>
-        <button id="btnCopyShareText">Copy feedback prompt</button>
-        <button id="btnOpenNewTab">Open</button>
-        <button id="btnResetLink">Clear</button>
-      </div>
-    </section>
-
-    <!-- Feedback -->
-    <section class="panel">
-      <header class="panel-header">
-        <h2>Feedback</h2>
-      </header>
-
-      <div class="sentiment">
-        <button data-sentiment="useful">Useful</button>
-        <button data-sentiment="confusing">Confusing</button>
-        <button data-sentiment="needs-work">Needs work</button>
-      </div>
-
-      <textarea
-        id="feedbackText"
-        placeholder="What worked? What didn’t?"
-      ></textarea>
-
-      <div class="panel-actions">
-        <button id="btnSubmitFeedback">Save feedback</button>
-        <button id="btnClearFeedback">Clear</button>
-        <button id="btnExportFeedback">Export</button>
-      </div>
-
-      <div id="feedbackSaveStatus" class="save-status"></div>
-      <div id="recentFeedback" class="feedback-list"></div>
-    </section>
-
-    <!-- Metrics -->
-    <section class="metrics">
-      <div class="metric"><strong id="statViews">0</strong><span>Views</span></div>
-      <div class="metric"><strong id="statLaunches">0</strong><span>Launches</span></div>
-      <div class="metric"><strong id="statFeedback">0</strong><span>Feedback</span></div>
-      <button id="btnResetAnalytics">Reset analytics</button>
-    </section>
-
-  </main>
-
-  <!-- Pricing Page -->
-  <main id="pagePricing" class="page">
-
-    <section class="hero">
-      <h1>Simple pricing</h1>
-      <p class="subtitle">Pay only when you need to share and validate.</p>
-    </section>
-
-    <section class="pricing-grid">
-      <div class="price-card">
-        <h3>Free</h3>
-        <p>Local prototyping only</p>
-        <ul>
-          <li>Paste & preview HTML</li>
-          <li>Local feedback</li>
-          <li>No accounts</li>
-        </ul>
-        <span class="price">$0</span>
-      </div>
-
-      <div class="price-card featured">
-        <div class="badge">Lifetime</div>
-        <h3>Lifetime Access</h3>
-        <p>Everything unlocked forever</p>
-        <ul>
-          <li>Shareable links</li>
-          <li>Feedback export</li>
-          <li>Early features</li>
-          <li>Support development</li>
-        </ul>
-        <span class="price">$39</span>
-      </div>
-    </section>
-
-  </main>
-
-  <footer class="footer">
-    <span>vibesnap.xyz</span>
-    <span class="dot">•</span>
-    <span>Local-first. Privacy-respecting.</span>
-  </footer>
-
-  <script src="app.js"></script>
+</main>
+<!-- Pricing Page -->
+<main class="page" id="pagePricing">
+<section class="hero">
+<h1>Simple pricing</h1>
+<p class="subtitle">Pay only when you need to share and validate.</p>
+</section>
+<section class="pricing-grid">
+<div class="price-card">
+<h3>Free</h3>
+<p>Local prototyping only</p>
+<ul>
+<li>Paste &amp; preview HTML</li>
+<li>Local feedback</li>
+<li>No accounts</li>
+</ul>
+<span class="price">$0</span>
+</div>
+<div class="price-card featured">
+<div class="badge">Lifetime</div>
+<h3>Lifetime Access</h3>
+<p>Everything unlocked forever</p>
+<ul>
+<li>Shareable links</li>
+<li>Feedback export</li>
+<li>Early features</li>
+<li>Support development</li>
+</ul>
+<span class="price">$39</span>
+</div>
+</section>
+</main>
+<footer class="footer">
+<span>vibesnap.xyz</span>
+<span class="dot">•</span>
+<span>Local-first. Privacy-respecting.</span>
+</footer>
+<script src="app.js"></script>
 </body>
 </html>
