@@ -1,400 +1,757 @@
-/* VibeSnap - app.js
-   Local-first prototype preview + lightweight feedback helpers.
-*/
-(function () {
+(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  // -----------------------------
+  // Local storage keys
+  // -----------------------------
   const LS = {
-    lastHtml: "vibesnap:last_html",
-    sharesPrefix: "vibesnap:share:",
-    analytics: "vibesnap:analytics",
-    feedback: "vibesnap:feedback",
+    DRAFT_HTML: "vibesnap:draft_html",
+    FEEDBACK: "vibesnap:feedback",
+    METRICS: "vibesnap:metrics",
+    SHARE: "vibesnap:share_map",
   };
 
-  function $(id) { return document.getElementById(id); }
-  function qsa(sel, root=document) { return Array.from(root.querySelectorAll(sel)); }
+  // -----------------------------
+  // Elements
+  // -----------------------------
+  const navBtns = $$("[data-nav]");
+  const toastEl = $("#toast");
 
-  function safeJsonParse(str, fallback) {
-    try { return JSON.parse(str); } catch { return fallback; }
+  // App core
+  const codeInput = $("#codeInput");
+  const btnStarter = $("#btnStarter");
+  const btnClearInput = $("#btnClearInput");
+  const btnDownload = $("#btnDownload");
+  const btnLaunch = $("#btnLaunch");
+  const btnReload = $("#btnReload");
+  const previewFrame = $("#previewFrame");
+  const saveStatus = $("#saveStatus");
+  const btnClearSaved = $("#btnClearSaved");
+
+  // Share
+  const shareInput = $("#shareInput");
+  const btnCreateShare = $("#btnCreateShare");
+  const btnCopyLink = $("#btnCopyLink");
+  const btnCopyPrompt = $("#btnCopyPrompt");
+  const btnOpenShare = $("#btnOpenShare");
+  const btnClearShare = $("#btnClearShare");
+
+  // Feedback
+  const segBtns = $$("[data-sentiment]");
+  const feedbackText = $("#feedbackText");
+  const btnSaveFeedback = $("#btnSaveFeedback");
+  const btnClearFeedback = $("#btnClearFeedback");
+  const btnExportFeedback = $("#btnExportFeedback");
+  const feedbackEmpty = $("#feedbackEmpty");
+
+  // Metrics
+  const statViews = $("#statViews");
+  const statLaunches = $("#statLaunches");
+  const statFeedback = $("#statFeedback");
+  const btnResetAnalytics = $("#btnResetAnalytics");
+
+  // Prompt builder
+  const pb = {
+    idea: $("#pbIdea"),
+    audience: $("#pbAudience"),
+    goal: $("#pbGoal"),
+    screens: $("#pbScreens"),
+    must: $("#pbMust"),
+    data: $("#pbData"),
+    style: $("#pbStyle"),
+    notes: $("#pbNotes"),
+    out: $("#pbOut"),
+    copy: $("#btnPromptCopy"),
+    reset: $("#btnPromptReset"),
+  };
+
+  // Import helper
+  const dzSingle = $("#dzSingle");
+  const fileSingle = $("#fileSingle");
+  const dzSplit = $("#dzSplit");
+  const fileSplit = $("#fileSplit");
+  const stSingle = $("#stSingle");
+  const stHtml = $("#stHtml");
+  const stCss = $("#stCss");
+  const stJs = $("#stJs");
+  const assembledOut = $("#assembledOut");
+  const btnImportClear = $("#btnImportClear");
+  const btnImportUse = $("#btnImportUse");
+  const btnAssembleCopy = $("#btnAssembleCopy");
+  const btnAssembleDownload = $("#btnAssembleDownload");
+  const btnAssembleLaunch = $("#btnAssembleLaunch");
+
+  // -----------------------------
+  // Utils
+  // -----------------------------
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    window.clearTimeout(toastEl._t);
+    toastEl._t = window.setTimeout(() => toastEl.classList.remove("show"), 2200);
   }
 
-  function getAnalytics() {
-    const base = { views: 0, launches: 0, feedback: 0 };
-    const v = safeJsonParse(localStorage.getItem(LS.analytics) || "", base);
-    return { ...base, ...v };
-  }
-  function setAnalytics(next) {
-    localStorage.setItem(LS.analytics, JSON.stringify(next));
-  }
-  function bump(key) {
-    const a = getAnalytics();
-    a[key] = (a[key] || 0) + 1;
-    setAnalytics(a);
-    return a;
+  function debounce(fn, wait = 200) {
+    let t = null;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
   }
 
-  // Toast
-  let toastTimer = null;
-  function showToast(title, msg) {
-    const t = $("toast");
-    if (!t) return;
-    const tt = $("toastTitle");
-    const tm = $("toastMsg");
-    if (tt) tt.textContent = title || "Done";
-    if (tm) tm.textContent = msg || "";
-    t.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  function safeJsonParse(value, fallback) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
   }
 
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
-      showToast("Copied", "Copied to clipboard.");
-      return true;
+      toast("Copied");
     } catch {
-      // Fallback
+      // fallback
       const ta = document.createElement("textarea");
       ta.value = text;
       ta.style.position = "fixed";
-      ta.style.left = "-9999px";
+      ta.style.left = "-999px";
       document.body.appendChild(ta);
       ta.select();
-      const ok = document.execCommand("copy");
+      document.execCommand("copy");
       document.body.removeChild(ta);
-      if (ok) showToast("Copied", "Copied to clipboard.");
-      return ok;
+      toast("Copied");
     }
   }
 
-  function downloadText(filename, content) {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  function downloadFile(filename, content, mime = "text/plain") {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 800);
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
-  // ---------- Workspace page ----------
-  function initWorkspace() {
-    const protoHtml = $("protoHtml");
-    if (!protoHtml) return;
+  // -----------------------------
+  // Navigation
+  // -----------------------------
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-    const saveState = $("saveState");
-    const btnPasteStarter = $("btnPasteStarter");
-    const btnClearHtml = $("btnClearHtml");
-    const btnDownloadHtml = $("btnDownloadHtml");
-    const btnLaunchPreview = $("btnLaunchPreview");
-    const btnOpenPreview = $("btnOpenPreview");
-
-    const shareInput = $("shareInput");
-    const btnCreateShare = $("btnCreateShare");
-    const btnCopyShare = $("btnCopyShare");
-    const btnCopyFeedbackPrompt = $("btnCopyFeedbackPrompt");
-    const btnOpenShare = $("btnOpenShare");
-    const btnClearShare = $("btnClearShare");
-
-    const feedbackText = $("feedbackText");
-    const feedbackStatus = $("feedbackStatus");
-    const btnSaveFeedback = $("btnSaveFeedback");
-    const btnClearFeedback = $("btnClearFeedback");
-    const btnExportFeedback = $("btnExportFeedback");
-
-    const kViews = $("kViews");
-    const kLaunches = $("kLaunches");
-    const kFeedback = $("kFeedback");
-    const btnResetAnalytics = $("btnResetAnalytics");
-
-    // Load saved HTML (if any)
-    const last = localStorage.getItem(LS.lastHtml);
-    if (last && !protoHtml.value) protoHtml.value = last;
-
-    function updateSaveState() {
-      if (!saveState) return;
-      const has = !!protoHtml.value.trim();
-      saveState.textContent = has ? "Ready" : "Nothing saved";
-    }
-    updateSaveState();
-
-    protoHtml.addEventListener("input", () => {
-      localStorage.setItem(LS.lastHtml, protoHtml.value);
-      updateSaveState();
+  navBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-nav");
+      if (!id) return;
+      scrollToSection(id);
     });
+  });
 
-    if (btnPasteStarter) {
-      btnPasteStarter.addEventListener("click", () => {
-        const starter = `<!doctype html>
-<html>
+  // active state on scroll (simple)
+  const sections = ["app", "prompt", "import", "pricing"].map((id) => document.getElementById(id)).filter(Boolean);
+  const setActiveNav = debounce(() => {
+    const y = window.scrollY + 120;
+    let current = "app";
+    for (const s of sections) {
+      if (s.offsetTop <= y) current = s.id;
+    }
+    navBtns.forEach((b) => b.classList.toggle("is-active", b.getAttribute("data-nav") === current));
+  }, 60);
+
+  window.addEventListener("scroll", setActiveNav, { passive: true });
+  setActiveNav();
+
+  // -----------------------------
+  // Metrics
+  // -----------------------------
+  const metricsDefault = { views: 0, launches: 0, feedback: 0 };
+  const getMetrics = () => safeJsonParse(localStorage.getItem(LS.METRICS), metricsDefault) || metricsDefault;
+  const setMetrics = (m) => localStorage.setItem(LS.METRICS, JSON.stringify(m));
+
+  function renderMetrics() {
+    const m = getMetrics();
+    if (statViews) statViews.textContent = String(m.views ?? 0);
+    if (statLaunches) statLaunches.textContent = String(m.launches ?? 0);
+    if (statFeedback) statFeedback.textContent = String(m.feedback ?? 0);
+  }
+
+  function bumpMetric(key, amount = 1) {
+    const m = getMetrics();
+    m[key] = (m[key] ?? 0) + amount;
+    setMetrics(m);
+    renderMetrics();
+  }
+
+  // Count a "view" once per tab session
+  const SESSION_VIEW_KEY = "vibesnap:session_viewed";
+  if (!sessionStorage.getItem(SESSION_VIEW_KEY)) {
+    sessionStorage.setItem(SESSION_VIEW_KEY, "1");
+    bumpMetric("views", 1);
+  } else {
+    renderMetrics();
+  }
+
+  if (btnResetAnalytics) {
+    btnResetAnalytics.addEventListener("click", () => {
+      localStorage.setItem(LS.METRICS, JSON.stringify(metricsDefault));
+      renderMetrics();
+      toast("Analytics reset");
+    });
+  }
+
+  // -----------------------------
+  // Draft autosave
+  // -----------------------------
+  function setSaveStatus(text) {
+    if (saveStatus) saveStatus.textContent = text;
+  }
+
+  function loadDraft() {
+    const draft = localStorage.getItem(LS.DRAFT_HTML) || "";
+    if (codeInput && draft.trim()) {
+      codeInput.value = draft;
+      setSaveStatus("Draft restored");
+    } else {
+      setSaveStatus("Nothing saved");
+    }
+  }
+
+  const saveDraftDebounced = debounce(() => {
+    if (!codeInput) return;
+    const val = (codeInput.value || "").trim();
+    if (!val) {
+      localStorage.removeItem(LS.DRAFT_HTML);
+      setSaveStatus("Nothing saved");
+      return;
+    }
+    localStorage.setItem(LS.DRAFT_HTML, val);
+    setSaveStatus("Saved locally");
+  }, 320);
+
+  if (codeInput) codeInput.addEventListener("input", saveDraftDebounced);
+
+  if (btnClearSaved) {
+    btnClearSaved.addEventListener("click", () => {
+      localStorage.removeItem(LS.DRAFT_HTML);
+      if (codeInput) codeInput.value = "";
+      setSaveStatus("Nothing saved");
+      toast("Saved draft cleared");
+    });
+  }
+
+  // -----------------------------
+  // Prototype launch
+  // -----------------------------
+  function setLoading(isLoading) {
+    if (!btnLaunch) return;
+    const label = btnLaunch.querySelector(".btn-label");
+    if (isLoading) {
+      btnLaunch.classList.add("is-loading");
+      btnLaunch.disabled = true;
+      if (label) label.textContent = "Launching…";
+    } else {
+      btnLaunch.classList.remove("is-loading");
+      btnLaunch.disabled = false;
+      if (label) label.textContent = "Launch preview";
+    }
+  }
+
+  function normalizeHtmlInput(raw) {
+    const s = (raw || "").trim();
+    if (!s) return "";
+    const looksLikeFull = /<html[\s>]/i.test(s) || /<!doctype/i.test(s);
+    if (looksLikeFull) return s;
+
+    return `<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prototype</title>
+  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:18px}</style>
+</head>
+<body>
+${s}
+</body>
+</html>`;
+  }
+
+  function setPreview(htmlText) {
+    if (!previewFrame) return;
+    previewFrame.srcdoc = htmlText;
+  }
+
+  async function launchFromText(raw) {
+    const normalized = normalizeHtmlInput(raw);
+    if (!normalized) {
+      toast("Paste HTML first");
+      return;
+    }
+    setLoading(true);
+    // tiny delay so the button gives feedback
+    await new Promise((r) => setTimeout(r, 120));
+    setPreview(normalized);
+    setLoading(false);
+    bumpMetric("launches", 1);
+  }
+
+  function launch() {
+    if (!codeInput) return;
+    launchFromText(codeInput.value);
+  }
+
+  if (btnLaunch) btnLaunch.addEventListener("click", launch);
+  if (btnReload) btnReload.addEventListener("click", () => {
+    if (previewFrame) previewFrame.srcdoc = previewFrame.srcdoc || "";
+    toast("Reloaded");
+  });
+
+  if (btnStarter) {
+    btnStarter.addEventListener("click", () => {
+      const starter = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Prototype</title>
   <style>
-    body{font-family:system-ui;margin:24px}
-    button{padding:10px 14px;border-radius:10px;border:1px solid #ddd;background:#111;color:#fff}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+    button{padding:10px 14px}
   </style>
 </head>
 <body>
   <h1>Hello prototype</h1>
   <p>Edit this file and reload preview.</p>
-  <button onclick="alert('Click')">Click me</button>
+  <button id="btn">Click me</button>
   <script>
-    console.log('prototype loaded');
+    document.getElementById('btn').addEventListener('click', () => alert('clicked'));
   </script>
 </body>
 </html>`;
-        protoHtml.value = starter;
-        localStorage.setItem(LS.lastHtml, starter);
-        updateSaveState();
-        showToast("Starter added", "Paste your prototype over the sample.");
-      });
-    }
-
-    if (btnClearHtml) {
-      btnClearHtml.addEventListener("click", () => {
-        protoHtml.value = "";
-        localStorage.removeItem(LS.lastHtml);
-        updateSaveState();
-        showToast("Cleared", "Prototype HTML cleared.");
-      });
-    }
-
-    if (btnDownloadHtml) {
-      btnDownloadHtml.addEventListener("click", () => {
-        const val = protoHtml.value.trim();
-        if (!val) return showToast("Nothing to download", "Paste some HTML first.");
-        downloadText("prototype.html", val);
-        showToast("Downloaded", "prototype.html saved.");
-      });
-    }
-
-    function openPreviewWith(html, sourceLabel) {
-      const trimmed = (html || "").trim();
-      if (!trimmed) return showToast("Nothing to preview", "Paste some HTML first.");
-      localStorage.setItem(LS.lastHtml, trimmed);
-      bump("launches");
-      syncAnalyticsUI();
-      const w = window.open("preview.html", "_blank", "noopener,noreferrer");
-      // The preview page reads from localStorage; small delay helps on some browsers.
-      setTimeout(() => {
-        try { w && w.focus && w.focus(); } catch {}
-      }, 80);
-      showToast("Preview opened", sourceLabel || "Opened in a new tab.");
-    }
-
-    if (btnLaunchPreview) btnLaunchPreview.addEventListener("click", () => openPreviewWith(protoHtml.value, "Launching preview…"));
-    if (btnOpenPreview) btnOpenPreview.addEventListener("click", () => window.open("preview.html", "_blank", "noopener,noreferrer"));
-
-    // Share link (local storage based)
-    function createShare() {
-      const htmlVal = protoHtml.value.trim();
-      if (!htmlVal) return showToast("Nothing to share", "Paste some HTML first.");
-      const id = (Math.random().toString(16).slice(2) + Date.now().toString(16)).slice(0, 16);
-      localStorage.setItem(LS.sharesPrefix + id, htmlVal);
-      const url = `${location.origin}${location.pathname.replace(/\/[^\/]*$/, "/")}preview.html#${id}`;
-      if (shareInput) shareInput.value = url;
-      showToast("Share link created", "Works on this device until backend exists.");
-      return { id, url };
-    }
-
-    if (btnCreateShare) btnCreateShare.addEventListener("click", createShare);
-    if (btnCopyShare) btnCopyShare.addEventListener("click", () => copyText(shareInput?.value || ""));
-    if (btnOpenShare) btnOpenShare.addEventListener("click", () => {
-      const url = shareInput?.value || "";
-      if (!url) return showToast("No link", "Create a share link first.");
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (codeInput) codeInput.value = starter;
+      localStorage.setItem(LS.DRAFT_HTML, starter);
+      setSaveStatus("Saved locally");
+      toast("Starter pasted");
     });
-    if (btnClearShare) btnClearShare.addEventListener("click", () => { if (shareInput) shareInput.value = ""; });
+  }
 
-    if (btnCopyFeedbackPrompt) {
-      btnCopyFeedbackPrompt.addEventListener("click", () => {
-        const prompt = `Quick feedback request:
-1) Would you use this? Why / why not?
-2) What’s missing for your workflow?
-3) If you could change one thing, what would it be?`;
-        copyText(prompt);
-      });
-    }
-
-    // Feedback tagging
-    let currentTag = "Useful";
-    qsa(".tagBtn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        currentTag = btn.getAttribute("data-tag") || "Useful";
-        qsa(".tagBtn").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
-      });
+  if (btnClearInput) {
+    btnClearInput.addEventListener("click", () => {
+      if (codeInput) codeInput.value = "";
+      toast("Cleared");
     });
+  }
 
-    // Feedback storage
-    const feedbackData = safeJsonParse(localStorage.getItem(LS.feedback) || "[]", []);
-    function syncFeedbackUI() {
-      const a = getAnalytics();
-      if (feedbackStatus) feedbackStatus.textContent = feedbackData.length ? `Saved locally (${feedbackData.length})` : "No feedback yet.";
-      if (kViews) kViews.textContent = String(a.views || 0);
-      if (kLaunches) kLaunches.textContent = String(a.launches || 0);
-      if (kFeedback) kFeedback.textContent = String(a.feedback || 0);
-    }
-    function syncAnalyticsUI(){ syncFeedbackUI(); }
-    syncFeedbackUI();
+  if (btnDownload) {
+    btnDownload.addEventListener("click", () => {
+      const raw = (codeInput?.value || "").trim();
+      if (!raw) return toast("Nothing to download");
+      const normalized = normalizeHtmlInput(raw);
+      downloadFile("prototype.html", normalized, "text/html");
+      toast("Downloaded");
+    });
+  }
 
-    if (btnSaveFeedback) {
-      btnSaveFeedback.addEventListener("click", () => {
-        const txt = (feedbackText?.value || "").trim();
-        if (!txt) return showToast("Empty", "Write a sentence first.");
-        const item = { tag: currentTag, text: txt, ts: new Date().toISOString() };
-        feedbackData.push(item);
-        localStorage.setItem(LS.feedback, JSON.stringify(feedbackData));
-        const a = bump("feedback");
-        if (kFeedback) kFeedback.textContent = String(a.feedback || 0);
-        if (feedbackText) feedbackText.value = "";
-        syncFeedbackUI();
-        showToast("Saved", "Feedback saved locally.");
-      });
-    }
+  loadDraft();
 
-    if (btnClearFeedback) btnClearFeedback.addEventListener("click", () => { if (feedbackText) feedbackText.value = ""; });
-    if (btnExportFeedback) {
-      btnExportFeedback.addEventListener("click", () => {
-        const data = safeJsonParse(localStorage.getItem(LS.feedback) || "[]", []);
-        downloadText("vibesnap-feedback.json", JSON.stringify(data, null, 2));
-        showToast("Exported", "vibesnap-feedback.json downloaded.");
-      });
-    }
+  // -----------------------------
+  // Share links (local-only)
+  // -----------------------------
+  function getShareMap() {
+    return safeJsonParse(localStorage.getItem(LS.SHARE), {}) || {};
+  }
+  function setShareMap(map) {
+    localStorage.setItem(LS.SHARE, JSON.stringify(map));
+  }
 
-    if (btnResetAnalytics) {
-      btnResetAnalytics.addEventListener("click", () => {
-        setAnalytics({ views: 0, launches: 0, feedback: 0 });
-        syncAnalyticsUI();
-        showToast("Reset", "Local counts cleared.");
-      });
+  function makeId() {
+    return Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+  }
+
+  function feedbackPrompt() {
+    return [
+      "Quick feedback request:",
+      "1) Would you use this? Why/why not?",
+      "2) What confused you or slowed you down?",
+      "3) What would you change first?"
+    ].join("\n");
+  }
+
+  function setShareUi(url) {
+    if (shareInput) shareInput.value = url || "";
+  }
+
+  function createShare() {
+    const raw = (codeInput?.value || "").trim();
+    if (!raw) return toast("Paste HTML first");
+    const id = makeId();
+    const map = getShareMap();
+    map[id] = { html: normalizeHtmlInput(raw), createdAt: Date.now() };
+    setShareMap(map);
+
+    const url = `${location.origin}${location.pathname}#share=${encodeURIComponent(id)}`;
+    setShareUi(url);
+    toast("Share link created");
+  }
+
+  if (btnCreateShare) btnCreateShare.addEventListener("click", createShare);
+
+  if (btnCopyLink) btnCopyLink.addEventListener("click", () => {
+    const url = (shareInput?.value || "").trim();
+    if (!url) return toast("Create a link first");
+    copyText(url);
+  });
+
+  if (btnCopyPrompt) btnCopyPrompt.addEventListener("click", () => {
+    copyText(feedbackPrompt());
+  });
+
+  if (btnOpenShare) btnOpenShare.addEventListener("click", () => {
+    const url = (shareInput?.value || "").trim();
+    if (!url) return toast("Create a link first");
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
+
+  if (btnClearShare) btnClearShare.addEventListener("click", () => {
+    setShareUi("");
+    toast("Cleared");
+  });
+
+  function tryHydrateFromShareHash() {
+    const m = location.hash.match(/share=([^&]+)/);
+    if (!m) return;
+    const id = decodeURIComponent(m[1] || "");
+    const map = getShareMap();
+    const record = map[id];
+    if (!record?.html) return;
+    // load into preview + editor
+    if (codeInput) codeInput.value = record.html;
+    localStorage.setItem(LS.DRAFT_HTML, record.html);
+    setSaveStatus("Draft restored");
+    setShareUi(`${location.origin}${location.pathname}#share=${encodeURIComponent(id)}`);
+    launchFromText(record.html);
+    toast("Loaded shared prototype");
+  }
+
+  tryHydrateFromShareHash();
+
+  // -----------------------------
+  // Feedback storage
+  // -----------------------------
+  function getFeedbackList() {
+    return safeJsonParse(localStorage.getItem(LS.FEEDBACK), []) || [];
+  }
+
+  function setFeedbackList(list) {
+    localStorage.setItem(LS.FEEDBACK, JSON.stringify(list));
+  }
+
+  function renderFeedbackEmpty() {
+    const list = getFeedbackList();
+    if (feedbackEmpty) {
+      feedbackEmpty.textContent = list.length ? `Saved: ${list.length}` : "No feedback yet.";
     }
   }
 
-  // ---------- Prompt builder page ----------
-  function initPromptBuilder() {
-    const out = $("pbOutput");
-    if (!out) return;
+  let currentSentiment = "useful";
+  segBtns.forEach((b) => {
+    b.addEventListener("click", () => {
+      segBtns.forEach((x) => x.classList.remove("is-active"));
+      b.classList.add("is-active");
+      currentSentiment = b.getAttribute("data-sentiment") || "useful";
+    });
+  });
 
-    const fields = {
-      what: $("pbWhat"),
-      forWhom: $("pbFor"),
-      goal: $("pbGoal"),
-      screens: $("pbScreens"),
-      interactions: $("pbInteractions"),
-      data: $("pbData"),
-      style: $("pbStyle"),
-      notes: $("pbNotes"),
+  if (btnSaveFeedback) {
+    btnSaveFeedback.addEventListener("click", () => {
+      const text = (feedbackText?.value || "").trim();
+      if (!text) return toast("Type feedback first");
+      const list = getFeedbackList();
+      list.unshift({ sentiment: currentSentiment, text, at: Date.now() });
+      setFeedbackList(list);
+      if (feedbackText) feedbackText.value = "";
+      bumpMetric("feedback", 1);
+      renderFeedbackEmpty();
+      toast("Saved");
+    });
+  }
+
+  if (btnClearFeedback) {
+    btnClearFeedback.addEventListener("click", () => {
+      if (feedbackText) feedbackText.value = "";
+      toast("Cleared");
+    });
+  }
+
+  if (btnExportFeedback) {
+    btnExportFeedback.addEventListener("click", () => {
+      const list = getFeedbackList();
+      if (!list.length) return toast("No feedback to export");
+      const out = JSON.stringify(list, null, 2);
+      downloadFile("vibesnap-feedback.json", out, "application/json");
+      toast("Exported");
+    });
+  }
+
+  renderFeedbackEmpty();
+
+  // -----------------------------
+  // Prompt builder
+  // -----------------------------
+  function buildPrompt() {
+    const idea = (pb.idea?.value || "").trim() || "[describe the app]";
+    const audience = (pb.audience?.value || "").trim() || "[target user]";
+    const goal = (pb.goal?.value || "").trim() || "[primary goal]";
+    const screens = (pb.screens?.value || "").trim() || "[key screens]";
+    const must = (pb.must?.value || "").trim() || "[must-have interaction]";
+    const data = (pb.data?.value || "").trim() || "[data to store]";
+    const style = (pb.style?.value || "").trim() || "Clean, modern, dark-mode friendly";
+    const notes = (pb.notes?.value || "").trim();
+
+    const lines = [
+      "You are generating a rapid validation prototype.",
+      "",
+      "Output a single self-contained HTML file that includes:",
+      "- Inline CSS in a <style> tag",
+      "- Inline JavaScript in a <script> tag",
+      "- No external libraries",
+      "- No external assets",
+      "- Works by opening the HTML file directly",
+      "",
+      `App concept: ${idea}`,
+      `Target user: ${audience}`,
+      `Primary goal: ${goal}`,
+      `Key screens: ${screens}`,
+      `Must-have interaction: ${must}`,
+      `Data to store: ${data}`,
+      "",
+      `Requirements:`,
+      `- Style: ${style}`,
+      "- Make it feel real: include realistic empty states, example data, and at least one meaningful interaction",
+      "- Keep it simple but functional",
+      "- Include a tiny 'prototype' label somewhere in the UI",
+      "",
+      "IMPORTANT:",
+      "Output ONLY the full HTML code (single file). Do not include explanations.",
+    ];
+
+    if (notes) {
+      lines.splice(lines.length - 3, 0, "", `Extra notes: ${notes}`);
+    }
+
+    return lines.join("\n");
+  }
+
+  function renderPrompt() {
+    if (!pb.out) return;
+    pb.out.value = buildPrompt();
+  }
+
+  const promptInputs = [pb.idea, pb.audience, pb.goal, pb.screens, pb.must, pb.data, pb.style, pb.notes].filter(Boolean);
+  promptInputs.forEach((el) => el.addEventListener("input", debounce(renderPrompt, 80)));
+  renderPrompt();
+
+  if (pb.copy) pb.copy.addEventListener("click", () => copyText(pb.out?.value || ""));
+  if (pb.reset) pb.reset.addEventListener("click", () => {
+    promptInputs.forEach((el) => (el.value = ""));
+    renderPrompt();
+    toast("Reset");
+  });
+
+  // -----------------------------
+  // Import helper: drag/drop + assemble
+  // -----------------------------
+  let importState = {
+    singleHtml: "",
+    html: "",
+    css: "",
+    js: "",
+    lastAssembled: "",
+  };
+
+  function setCheck(el, ok) {
+    if (!el) return;
+    el.classList.toggle("is-ok", !!ok);
+  }
+
+  function assemble(htmlText, cssText, jsText) {
+    const base = (htmlText || "").trim();
+    if (!base) return "";
+    const hasHtml = /<html[\s>]/i.test(base) || /<!doctype/i.test(base);
+    let doc = hasHtml ? base : normalizeHtmlInput(base);
+
+    // inject css
+    if (cssText && cssText.trim()) {
+      const cssTag = `\n<style>\n${cssText.trim()}\n</style>\n`;
+      if (/<\/head>/i.test(doc)) {
+        doc = doc.replace(/<\/head>/i, cssTag + "</head>");
+      } else {
+        doc = doc.replace(/<body[^>]*>/i, (m) => m + cssTag);
+      }
+    }
+
+    // inject js
+    if (jsText && jsText.trim()) {
+      const jsTag = `\n<script>\n${jsText.trim()}\n</script>\n`;
+      if (/<\/body>/i.test(doc)) {
+        doc = doc.replace(/<\/body>/i, jsTag + "</body>");
+      } else {
+        doc += jsTag;
+      }
+    }
+
+    return doc;
+  }
+
+  function renderImport() {
+    // status
+    setCheck(stSingle, !!importState.singleHtml);
+    setCheck(stHtml, !!importState.html);
+    setCheck(stCss, !!importState.css);
+    setCheck(stJs, !!importState.js);
+
+    // assembled output prefers split, else single
+    const assembled = importState.html
+      ? assemble(importState.html, importState.css, importState.js)
+      : importState.singleHtml
+        ? normalizeHtmlInput(importState.singleHtml)
+        : "";
+
+    importState.lastAssembled = assembled;
+    if (assembledOut) assembledOut.value = assembled;
+  }
+
+  async function readFileAsText(file) {
+    return await file.text();
+  }
+
+  function handleSingleFile(file) {
+    if (!file) return;
+    const name = (file.name || "").toLowerCase();
+    if (!name.endsWith(".html")) {
+      toast("Please upload an .html file");
+      return;
+    }
+    readFileAsText(file).then((text) => {
+      importState.singleHtml = text;
+      toast("HTML file uploaded");
+      renderImport();
+    });
+  }
+
+  function handleSplitFiles(files) {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+
+    const reads = list.map(async (f) => {
+      const n = (f.name || "").toLowerCase();
+      const t = await readFileAsText(f);
+      if (n.endsWith(".html")) importState.html = t;
+      else if (n.endsWith(".css")) importState.css = t;
+      else if (n.endsWith(".js")) importState.js = t;
+    });
+
+    Promise.all(reads).then(() => {
+      toast("Files uploaded");
+      renderImport();
+    });
+  }
+
+  // Dropzone helpers
+  function wireDropzone(zone, onFiles) {
+    if (!zone) return;
+
+    const prevent = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
     };
 
-    function val(el, fallback="") { return (el && el.value ? el.value.trim() : fallback); }
-
-    function buildPrompt() {
-      const prompt = [
-        "You are generating a rapid validation prototype.",
-        "",
-        "Make a single self-contained HTML file that includes:",
-        "- Inline CSS in a <style> tag",
-        "- Inline JavaScript in a <script> tag",
-        "- No external libraries",
-        "- No external assets",
-        "- Works by opening the HTML file directly",
-        "",
-        `App concept: ${val(fields.what, "[describe the app]")}`,
-        `Target user: ${val(fields.forWhom, "[who is this for]")}`,
-        `Primary goal: ${val(fields.goal, "[primary goal]")}`,
-        `Key screens: ${val(fields.screens, "[screens]")}`,
-        `Must-have interactions: ${val(fields.interactions, "[interactions]")}`,
-        `Data to store: ${val(fields.data, "[data fields]")}`,
-        "",
-        "Requirements:",
-        `- Style: ${val(fields.style, "Clean, modern UI (dark mode friendly)")}`,
-        "- Make it feel real: include realistic empty states and example data",
-        "- Keep it simple but functional",
-        "- Include a tiny 'prototype' label somewhere in the UI",
-        val(fields.notes) ? "" : "",
-        val(fields.notes) ? `Extra notes: ${val(fields.notes)}` : "",
-        "",
-        "Output ONLY the full HTML code. Do not include explanations.",
-        "",
-        "Important export instruction:",
-        "After outputting the code, also provide it as a downloadable file named prototype.html (or clearly indicate the full code is the file contents)."
-      ].filter(Boolean).join("\n");
-
-      out.value = prompt;
-    }
-
-    Object.values(fields).forEach(el => el && el.addEventListener("input", buildPrompt));
-    buildPrompt();
-
-    const btnCopy = $("btnCopyPrompt");
-    if (btnCopy) btnCopy.addEventListener("click", () => copyText(out.value));
-
-    const btnReset = $("btnPromptReset");
-    if (btnReset) {
-      btnReset.addEventListener("click", () => {
-        Object.values(fields).forEach(el => { if (el) el.value = ""; });
-        buildPrompt();
-        showToast("Reset", "Fields cleared.");
+    ["dragenter", "dragover"].forEach((evt) => {
+      zone.addEventListener(evt, (e) => {
+        prevent(e);
+        zone.classList.add("is-over");
       });
-    }
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      zone.addEventListener(evt, (e) => {
+        prevent(e);
+        zone.classList.remove("is-over");
+      });
+    });
+
+    zone.addEventListener("drop", (e) => {
+      const files = e.dataTransfer?.files;
+      if (files && files.length) onFiles(files);
+    });
+
+    zone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        // let the hidden file inputs handle browse in UI
+      }
+    });
   }
 
-  // ---------- Preview page ----------
-  function initPreview() {
-    const frame = $("frame");
-    if (!frame) return;
+  wireDropzone(dzSingle, (files) => handleSingleFile(files[0]));
+  wireDropzone(dzSplit, (files) => handleSplitFiles(files));
 
-    // Count view
-    bump("views");
-
-    const meta = $("previewMeta");
-    const btnReload = $("btnReload");
-
-    function loadFromStorage() {
-      let source = "local";
-      let html = localStorage.getItem(LS.lastHtml) || "";
-      const hash = (location.hash || "").replace("#", "").trim();
-      if (hash) {
-        const shared = localStorage.getItem(LS.sharesPrefix + hash) || "";
-        if (shared) {
-          html = shared;
-          source = "share";
-        } else {
-          source = "missing";
-        }
-      }
-
-      if (meta) {
-        meta.textContent =
-          source === "share" ? "Preview (local share link)" :
-          source === "missing" ? "Preview (not found on this device)" :
-          "Preview";
-      }
-
-      if (!html.trim()) {
-        frame.srcdoc = `<html><body style="font-family:system-ui;margin:24px;background:#0b0d10;color:#fff">
-          <h2 style="margin:0 0 8px">No prototype loaded</h2>
-          <p style="opacity:.75;line-height:1.5">Go back to the workspace and click <b>Launch preview</b>.</p>
-        </body></html>`;
-        return;
-      }
-
-      frame.srcdoc = html;
-      showToast("Loaded", "Preview ready.");
-    }
-
-    loadFromStorage();
-
-    if (btnReload) btnReload.addEventListener("click", loadFromStorage);
-    window.addEventListener("hashchange", loadFromStorage);
+  if (fileSingle) {
+    fileSingle.addEventListener("change", (e) => handleSingleFile(e.target.files?.[0]));
+  }
+  if (fileSplit) {
+    fileSplit.addEventListener("change", (e) => handleSplitFiles(e.target.files));
   }
 
-  // Init by page content
-  document.addEventListener("DOMContentLoaded", () => {
-    initWorkspace();
-    initPromptBuilder();
-    initPreview();
+  if (btnImportClear) {
+    btnImportClear.addEventListener("click", () => {
+      importState = { singleHtml: "", html: "", css: "", js: "", lastAssembled: "" };
+      if (assembledOut) assembledOut.value = "";
+      renderImport();
+      toast("Cleared imports");
+    });
+  }
+
+  if (btnImportUse) {
+    btnImportUse.addEventListener("click", () => {
+      const assembled = importState.lastAssembled || "";
+      if (!assembled.trim()) return toast("Nothing to load");
+      if (codeInput) codeInput.value = assembled;
+      localStorage.setItem(LS.DRAFT_HTML, assembled);
+      setSaveStatus("Saved locally");
+      toast("Loaded into App");
+      scrollToSection("app");
+    });
+  }
+
+  if (btnAssembleCopy) btnAssembleCopy.addEventListener("click", () => {
+    const assembled = importState.lastAssembled || "";
+    if (!assembled.trim()) return toast("Nothing to copy");
+    copyText(assembled);
   });
+
+  if (btnAssembleDownload) btnAssembleDownload.addEventListener("click", () => {
+    const assembled = importState.lastAssembled || "";
+    if (!assembled.trim()) return toast("Nothing to download");
+    downloadFile("assembled.html", assembled, "text/html");
+    toast("Downloaded");
+  });
+
+  if (btnAssembleLaunch) btnAssembleLaunch.addEventListener("click", () => {
+    const assembled = importState.lastAssembled || "";
+    if (!assembled.trim()) return toast("Nothing to launch");
+    launchFromText(assembled);
+    scrollToSection("app");
+  });
+
+  renderImport();
 })();

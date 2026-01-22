@@ -1,203 +1,382 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap — Workspace</title>
-  <meta name="description" content="Paste a single-file HTML prototype. Launch it in a sandboxed preview tab and collect lightweight feedback." />
+  <title>VibeSnap — prototype fast, validate faster</title>
+  <meta name="description" content="Paste or upload AI-generated HTML prototypes, run them safely in a sandbox, and collect lightweight feedback — without setup." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="index.html" aria-label="VibeSnap home">
-        <span class="mark" aria-hidden="true"></span>
-        <span class="word">vibesnap</span>
-      </a>
+  <a class="skip" href="#app">Skip to app</a>
+
+  <header class="topbar" role="banner">
+    <div class="topbar-inner">
+      <div class="brand" aria-label="VibeSnap">
+        <span class="brand-mark" aria-hidden="true">🔥</span>
+        <span class="brand-word">vibesnap</span>
+      </div>
+
       <nav class="nav" aria-label="Primary">
-        <a class="pill is-active" href="index.html">Workspace</a>
-        <a class="pill" href="prompt.html">Prompt builder</a>
-        <a class="pill" href="pricing.html">Pricing</a>
+        <button class="pill is-active" data-nav="app" type="button">App</button>
+        <button class="pill" data-nav="prompt" type="button">Prompt builder</button>
+        <button class="pill" data-nav="import" type="button">Import helper</button>
+        <button class="pill" data-nav="pricing" type="button">Pricing</button>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <h1>Prototype fast. Validate faster.</h1>
-      <p>Paste a single-file HTML prototype, then launch it in a separate preview tab. Share a local link and collect quick feedback without setup.</p>
-      <div class="chips" aria-label="Trust notes">
-        <span class="chip">Runs locally</span>
-        <span class="chip">Sandboxed preview</span>
-        <span class="chip">No cookies</span>
-        <span class="chip">No tracking pixels</span>
+  <main class="shell">
+    <section class="hero" aria-label="Intro">
+      <div class="hero-inner">
+        <h1>Prototype fast. Validate faster.</h1>
+        <p class="sub">
+          Paste HTML from ChatGPT, Claude, Gemini, or anywhere. Launch it instantly in a sandbox. Share it for quick feedback.
+        </p>
+
+        <div class="chips" aria-label="Trust">
+          <span class="chip">Runs locally</span>
+          <span class="chip">Sandboxed preview</span>
+          <span class="chip">No cookies</span>
+          <span class="chip">No tracking pixels</span>
+        </div>
+
+        <p class="privacy">
+          Your ideas stay yours. VibeSnap doesn’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
+        </p>
       </div>
-      <p class="privacy">
-        Your ideas stay yours. VibeSnap doesn’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
-      </p>
     </section>
 
-    <section class="grid" aria-label="Workspace">
-      <div class="stack">
-        <section class="card" aria-label="Prototype HTML">
-          <div class="card-inner">
-            <div class="card-head">
-              <div>
-                <h2 class="card-title">Prototype HTML</h2>
-                <p class="card-sub">Paste a complete <b>single-file</b> HTML prototype (inline CSS + JS). Then launch a preview tab.</p>
-              </div>
-              <div class="row">
-                <button class="btn small" id="btnPasteStarter" type="button">Paste starter</button>
-                <button class="btn small ghost" id="btnClearHtml" type="button">Clear</button>
-              </div>
-            </div>
-
-            <div class="callout" role="note">
-              <span class="tag">Tip</span>
-              <div>
-                <b>For best results</b>
-                <p>Ask your AI tool to export <b>one self-contained HTML file</b> (no external libraries). If you need split files, use the Import helper.</p>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="label" for="protoHtml">Prototype HTML</label>
-              <textarea class="textarea" id="protoHtml" placeholder="Paste a complete single-file HTML prototype here..."></textarea>
-              <div class="row" style="justify-content:space-between;">
-                <span class="hint" id="saveState">Nothing saved</span>
-                <div class="row">
-                  <button class="btn small" id="btnDownloadHtml" type="button">Download HTML</button>
-                  <button class="btn small primary" id="btnLaunchPreview" type="button">Launch preview</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="card" aria-label="Live preview removed notice">
-          <div class="card-inner">
-            <div class="card-head">
-              <div>
-                <h2 class="card-title">Preview in a separate tab</h2>
-                <p class="card-sub">Keeps the workspace focused. Preview loads in a sandboxed page.</p>
-              </div>
-              <button class="btn small" id="btnOpenPreview" type="button">Open preview</button>
-            </div>
-            <div class="callout" role="note">
-              <span class="tag">Safety</span>
-              <div>
-                <b>Sandbox constraints</b>
-                <p>Preview runs in an isolated iframe. It can’t read this page. Some external scripts/assets may be blocked depending on the browser.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+    <!-- APP -->
+    <section id="app" class="section">
+      <div class="section-head">
+        <h2>Preview prototype</h2>
+        <p class="muted">Paste a single-file HTML prototype (inline CSS + JS). Then launch and iterate.</p>
       </div>
 
-      <div class="stack">
-        <section class="card" aria-label="Share for feedback">
-          <div class="card-inner">
-            <div class="card-head">
-              <div>
-                <h2 class="card-title">Share for feedback</h2>
-                <p class="card-sub">Creates a local share link that opens the preview tab on this device. (Backend sharing comes later.)</p>
-              </div>
+      <div class="grid">
+        <section class="card card-xl" aria-label="Prototype input">
+          <header class="card-head">
+            <div>
+              <h3>Prototype HTML</h3>
+              <p class="muted">Paste a complete single-file HTML prototype here.</p>
             </div>
-
-            <div class="field">
-              <label class="label" for="shareInput">Share link</label>
-              <div class="row">
-                <input class="input" id="shareInput" placeholder="Create a share link…" autocomplete="off" />
-                <button class="btn primary" id="btnCreateShare" type="button">Create</button>
-              </div>
-              <div class="row">
-                <button class="btn small" id="btnCopyShare" type="button">Copy link</button>
-                <button class="btn small" id="btnCopyFeedbackPrompt" type="button">Copy feedback prompt</button>
-                <button class="btn small" id="btnOpenShare" type="button">Open</button>
-                <button class="btn small ghost" id="btnClearShare" type="button">Clear</button>
-              </div>
+            <div class="actions">
+              <button class="btn btn-ghost" id="btnStarter" type="button">Paste starter</button>
+              <button class="btn btn-ghost" id="btnClearInput" type="button">Clear</button>
             </div>
+          </header>
 
-            <div class="callout" role="note" style="margin-top:12px">
-              <span class="tag">Tip</span>
-              <div>
-                <b>Quick signal</b>
-                <p>Share the link with one question, e.g. “Would you use this? What’s missing?” + a screenshot.</p>
-              </div>
+          <div class="callout">
+            <strong>Tip:</strong> Ask your AI tool to export <em>one self-contained HTML file</em> (no external libraries, inline CSS + JS).
+            If you have split files instead, use <button class="linklike" data-nav="import" type="button">Import helper</button>.
+          </div>
+
+          <label class="sr" for="codeInput">Prototype HTML</label>
+          <textarea id="codeInput" spellcheck="false" placeholder="Paste a complete single-file HTML prototype here..."></textarea>
+
+          <div class="row">
+            <div class="save" aria-live="polite">
+              <span id="saveStatus">Nothing saved</span>
+              <button class="link" id="btnClearSaved" type="button">Clear saved</button>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-ghost" id="btnDownload" type="button">Download HTML</button>
+              <button class="btn btn-primary" id="btnLaunch" type="button">
+                <span class="btn-label">Launch preview</span>
+                <span class="spinner" aria-hidden="true"></span>
+              </button>
             </div>
           </div>
         </section>
 
-        <section class="card" aria-label="Feedback collection">
-          <div class="card-inner">
-            <div class="card-head">
+        <section class="stack">
+          <section class="card" aria-label="Share and validate">
+            <header class="card-head">
               <div>
-                <h2 class="card-title">Feedback</h2>
-                <p class="card-sub">Designed for quick validation. Keep it simple.</p>
+                <h3>Share for feedback</h3>
+                <p class="muted">Create a share link on this device (backend sharing comes later).</p>
               </div>
-            </div>
+            </header>
 
-            <div class="seg" role="group" aria-label="Feedback tag">
-              <button type="button" class="tagBtn" data-tag="Useful" aria-pressed="true">Useful</button>
-              <button type="button" class="tagBtn" data-tag="Confusing" aria-pressed="false">Confusing</button>
-              <button type="button" class="tagBtn" data-tag="Needs work" aria-pressed="false">Needs work</button>
-            </div>
-
-            <div class="field">
-              <label class="label" for="feedbackText">Feedback</label>
-              <textarea class="textarea" id="feedbackText" style="min-height:140px" placeholder="What worked? What didn’t? One sentence is enough."></textarea>
-              <div class="row" style="justify-content:space-between;">
-                <span class="hint" id="feedbackStatus">No feedback yet.</span>
-                <div class="row">
-                  <button class="btn small primary" id="btnSaveFeedback" type="button">Save feedback</button>
-                  <button class="btn small ghost" id="btnClearFeedback" type="button">Clear</button>
-                  <button class="btn small" id="btnExportFeedback" type="button">Export</button>
+            <div class="share">
+              <div class="field">
+                <label for="shareInput">Share link</label>
+                <div class="field-row">
+                  <input id="shareInput" type="text" placeholder="Create a share link..." readonly />
+                  <button class="btn btn-primary" id="btnCreateShare" type="button">Create</button>
                 </div>
               </div>
+
+              <div class="actions-wrap">
+                <button class="btn btn-ghost" id="btnCopyLink" type="button">Copy link</button>
+                <button class="btn btn-ghost" id="btnCopyPrompt" type="button">Copy feedback prompt</button>
+                <button class="btn btn-ghost" id="btnOpenShare" type="button">Open</button>
+                <button class="btn btn-ghost" id="btnClearShare" type="button">Clear</button>
+              </div>
+
+              <div class="callout subtle">
+                <strong>Safety note:</strong> Previews run in a sandboxed iframe. It can’t read your parent page. External scripts/assets may be blocked by the browser.
+              </div>
             </div>
-          </div>
+          </section>
+
+          <section class="card" aria-label="Feedback">
+            <header class="card-head">
+              <div>
+                <h3>Feedback</h3>
+                <p class="muted">Designed for quick validation. Keep it simple.</p>
+              </div>
+            </header>
+
+            <div class="seg" role="group" aria-label="Feedback type">
+              <button class="seg-btn is-active" data-sentiment="useful" type="button">Useful</button>
+              <button class="seg-btn" data-sentiment="confusing" type="button">Confusing</button>
+              <button class="seg-btn" data-sentiment="needswork" type="button">Needs work</button>
+            </div>
+
+            <label class="sr" for="feedbackText">Feedback text</label>
+            <textarea id="feedbackText" placeholder="What worked? What didn’t? One sentence is enough."></textarea>
+
+            <div class="row">
+              <div class="muted" id="feedbackEmpty">No feedback yet.</div>
+              <div class="row-actions">
+                <button class="btn btn-primary" id="btnSaveFeedback" type="button">Save feedback</button>
+                <button class="btn btn-ghost" id="btnClearFeedback" type="button">Clear</button>
+                <button class="btn btn-ghost" id="btnExportFeedback" type="button">Export</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Lightweight analytics">
+            <header class="card-head">
+              <div>
+                <h3>Lightweight analytics</h3>
+                <p class="muted">Local first. No identity. Just actions.</p>
+              </div>
+              <div class="actions">
+                <button class="btn btn-ghost" id="btnResetAnalytics" type="button">Reset</button>
+              </div>
+            </header>
+
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-num" id="statViews">0</div>
+                <div class="stat-label">Views</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num" id="statLaunches">0</div>
+                <div class="stat-label">Launches</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num" id="statFeedback">0</div>
+                <div class="stat-label">Feedback</div>
+              </div>
+            </div>
+
+            <div class="callout subtle">
+              <strong>Validate fast:</strong> Ask one question (“Would you use this?” / “What’s missing?”), share a link + screenshot, and iterate quickly.
+            </div>
+          </section>
         </section>
 
-        <section class="card" aria-label="Lightweight analytics">
-          <div class="card-inner">
-            <div class="card-head">
-              <div>
-                <h2 class="card-title">Lightweight analytics</h2>
-                <p class="card-sub">Local-first. No identity. Just actions.</p>
-              </div>
-              <button class="btn small" id="btnResetAnalytics" type="button">Reset</button>
+        <section class="card card-xl" aria-label="Live preview">
+          <header class="card-head">
+            <div>
+              <h3>Live preview</h3>
+              <p class="muted">Your prototype runs here. Use Reload if it gets stuck.</p>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" id="btnReload" type="button">Reload</button>
+            </div>
+          </header>
+
+          <div class="frame-wrap">
+            <iframe id="previewFrame" title="Prototype preview" sandbox="allow-scripts allow-forms allow-modals allow-pointer-lock allow-popups"></iframe>
+          </div>
+
+          <div class="muted tiny">Prototype only. Not production hosting.</div>
+        </section>
+      </div>
+    </section>
+
+    <!-- PROMPT BUILDER -->
+    <section id="prompt" class="section">
+      <div class="section-head">
+        <h2>Prompt builder</h2>
+        <p class="muted">Generate a copy‑paste prompt that tells your AI tool to export a <strong>single self‑contained HTML file</strong>.</p>
+      </div>
+
+      <section class="card">
+        <header class="card-head">
+          <div>
+            <h3>Generate a prototype-ready prompt</h3>
+            <p class="muted">Fill this out, copy the prompt, paste into ChatGPT/Claude/Gemini, and ask for a single HTML file output.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" id="btnPromptReset" type="button">Reset</button>
+            <button class="btn btn-primary" id="btnPromptCopy" type="button">Copy prompt</button>
+          </div>
+        </header>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="pbIdea">What are you building?</label>
+            <input id="pbIdea" type="text" placeholder="Example: spending tracker" />
+          </div>
+          <div class="field">
+            <label for="pbAudience">Who is it for?</label>
+            <input id="pbAudience" type="text" placeholder="Example: people splitting bills" />
+          </div>
+          <div class="field">
+            <label for="pbGoal">Primary goal</label>
+            <input id="pbGoal" type="text" placeholder="Example: log expenses quickly" />
+          </div>
+          <div class="field">
+            <label for="pbScreens">Key screens (comma separated)</label>
+            <input id="pbScreens" type="text" placeholder="Dashboard, Add expense, History" />
+          </div>
+          <div class="field">
+            <label for="pbMust">Must-have interaction</label>
+            <input id="pbMust" type="text" placeholder="Example: add/edit/delete entries" />
+          </div>
+          <div class="field">
+            <label for="pbData">Data to store (comma separated)</label>
+            <input id="pbData" type="text" placeholder="amount, category, date, notes" />
+          </div>
+          <div class="field">
+            <label for="pbStyle">Style</label>
+            <input id="pbStyle" type="text" placeholder="Clean, modern, dark-mode friendly" />
+          </div>
+          <div class="field field-wide">
+            <label for="pbNotes">Extra notes (optional)</label>
+            <input id="pbNotes" type="text" placeholder="Example: include realistic empty states, sample data, and a tiny 'prototype' label." />
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Copy + paste workflow:</strong>
+          1) Generate prompt → 2) Paste into your AI tool → 3) Ask it to output <em>one HTML file</em> → 4) Drag that file into VibeSnap.
+        </div>
+
+        <div class="field">
+          <label for="pbOut">Generated prompt</label>
+          <textarea id="pbOut" spellcheck="false" readonly></textarea>
+        </div>
+      </section>
+    </section>
+
+    <!-- IMPORT HELPER -->
+    <section id="import" class="section">
+      <div class="section-head">
+        <h2>Import helper</h2>
+        <p class="muted">Drop files here to assemble and load them into the preview — single file or split HTML/CSS/JS.</p>
+      </div>
+
+      <section class="card">
+        <header class="card-head">
+          <div>
+            <h3>Bring your files in</h3>
+            <p class="muted">VibeSnap supports inline HTML, or split files for advanced workflows.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" id="btnImportClear" type="button">Clear</button>
+            <button class="btn btn-primary" id="btnImportUse" type="button">Load into App</button>
+          </div>
+        </header>
+
+        <div class="import-grid">
+          <div class="import-col">
+            <h4>Option A — Single file (recommended)</h4>
+            <p class="muted">Drop one HTML file that includes inline CSS + JS.</p>
+
+            <div class="dropzone" id="dzSingle" tabindex="0" role="button" aria-label="Drop single HTML file">
+              <div class="dz-title">Drop HTML here</div>
+              <div class="dz-sub">or <label class="filelink"><input id="fileSingle" type="file" accept=".html,text/html" />browse</label></div>
             </div>
 
-            <div class="kpi">
-              <div class="k"><div class="n" id="kViews">0</div><div class="t">Views</div></div>
-              <div class="k"><div class="n" id="kLaunches">0</div><div class="t">Launches</div></div>
-              <div class="k"><div class="n" id="kFeedback">0</div><div class="t">Feedback</div></div>
+            <ul class="checks" aria-label="Single file status">
+              <li id="stSingle" class="check">HTML file uploaded</li>
+            </ul>
+          </div>
+
+          <div class="import-col">
+            <h4>Option C — Split files (advanced)</h4>
+            <p class="muted">Drop HTML + (optional) CSS + (optional) JS. We’ll assemble into one preview file.</p>
+
+            <div class="dropzone" id="dzSplit" tabindex="0" role="button" aria-label="Drop split files">
+              <div class="dz-title">Drop HTML / CSS / JS here</div>
+              <div class="dz-sub">or <label class="filelink"><input id="fileSplit" type="file" multiple accept=".html,.css,.js,text/html,text/css,text/javascript,application/javascript" />browse</label></div>
             </div>
 
-            <div class="callout" role="note" style="margin-top:12px">
-              <span class="tag">Validate fast</span>
-              <div>
-                <b>Use a single question</b>
-                <p>Ask: “Would you use this?” or “What’s missing?” Then iterate quickly. Don’t overbuild.</p>
+            <ul class="checks" aria-label="Split file status">
+              <li id="stHtml" class="check">HTML uploaded</li>
+              <li id="stCss" class="check">CSS uploaded (optional)</li>
+              <li id="stJs" class="check">JS uploaded (optional)</li>
+            </ul>
+
+            <div class="callout subtle">
+              If you only upload HTML, we’ll preview it as-is. Upload CSS/JS to embed them into the assembled file.
+            </div>
+
+            <div class="row">
+              <div class="row-actions">
+                <button class="btn btn-ghost" id="btnAssembleCopy" type="button">Copy assembled HTML</button>
+                <button class="btn btn-ghost" id="btnAssembleDownload" type="button">Download assembled HTML</button>
+                <button class="btn btn-ghost" id="btnAssembleLaunch" type="button">Launch assembled</button>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="field">
+          <label for="assembledOut">Assembled output</label>
+          <textarea id="assembledOut" spellcheck="false" readonly placeholder="Your assembled single-file HTML will appear here."></textarea>
+        </div>
+      </section>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing" class="section">
+      <div class="section-head">
+        <h2>Simple pricing</h2>
+        <p class="muted">Pay only when you need to share and validate.</p>
+      </div>
+
+      <div class="pricing">
+        <section class="card price">
+          <div class="badge">Free</div>
+          <h3>Local prototyping only</h3>
+          <ul>
+            <li>Paste &amp; preview HTML</li>
+            <li>Local feedback</li>
+            <li>No accounts</li>
+          </ul>
+          <div class="price-num">$0</div>
+        </section>
+
+        <section class="card price featured">
+          <div class="badge">Lifetime</div>
+          <h3>Lifetime Access</h3>
+          <p class="muted">Everything unlocked forever</p>
+          <ul>
+            <li>Shareable links</li>
+            <li>Feedback export</li>
+            <li>Early features</li>
+            <li>Support development</li>
+          </ul>
+          <div class="price-num">$39</div>
         </section>
       </div>
     </section>
 
     <footer class="footer">
-      <div class="wrap">
-        <span>vibesnap.xyz</span>
-        <span>Local-first. Privacy-respecting.</span>
-      </div>
+      <div class="footline"></div>
+      <div class="footnote">vibesnap.xyz · Local-first. Privacy-respecting.</div>
     </footer>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
-    <div class="title" id="toastTitle">Saved</div>
-    <div class="msg" id="toastMsg">Done.</div>
-  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="app.js"></script>
 </body>

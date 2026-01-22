@@ -2,83 +2,150 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap — Pricing</title>
-  <meta name="description" content="Simple pricing for local prototyping and optional sharing features." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VibeSnap • Pricing</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
+  <main class="shell">
+    <header class="topbar">
       <a class="brand" href="index.html" aria-label="VibeSnap home">
-        <span class="mark" aria-hidden="true"></span>
-        <span class="word">vibesnap</span>
+        <span class="brandMark" aria-hidden="true">🔥</span>
+        <span class="brandText">vibesnap</span>
       </a>
-      <nav class="nav" aria-label="Primary">
-        <a class="pill" href="index.html">Workspace</a>
-        <a class="pill" href="prompt.html">Prompt builder</a>
-        <a class="pill is-active" href="pricing.html">Pricing</a>
-      </nav>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <h1>Simple pricing</h1>
-      <p>Pay only when you need to share and validate.</p>
+      <nav class="nav">
+        <a class="navLink" href="index.html">Workspace</a>
+        <a class="navLink" href="prompt.html">Prompt Builder</a>
+        <a class="navLink navLink--active" href="pricing.html" aria-current="page">Pricing</a>
+      </nav>
+    </header>
+
+    <section class="pageHead">
+      <h1 class="h1">Pricing</h1>
+      <p class="subhead">
+        Simple, predictable, and privacy-first. Start free, upgrade only if it saves you time.
+      </p>
     </section>
 
-    <section class="grid" style="grid-template-columns: 1fr 1fr;" aria-label="Pricing">
-      <section class="card">
-        <div class="card-inner">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Free</h2>
-              <p class="card-sub">Local prototyping only</p>
-            </div>
+    <section class="cardsGrid" aria-label="Pricing plans">
+      <article class="priceCard">
+        <header class="priceTop">
+          <h2 class="h3">Free</h2>
+          <div class="priceLine">
+            <span class="price">$0</span>
+            <span class="per">forever</span>
           </div>
-          <ul style="margin:10px 0 0; padding-left:18px; color: var(--muted); font-size:13px; line-height:1.6">
-            <li>Paste & preview HTML</li>
-            <li>Local feedback</li>
-            <li>No accounts</li>
-          </ul>
-          <div style="margin-top:14px;font-size:28px;font-weight:900;letter-spacing:-.5px">$0</div>
-          <div class="hint" style="margin-top:6px">Best for personal workflow.</div>
-        </div>
-      </section>
+          <p class="muted">For personal drafts and quick checks.</p>
+        </header>
 
-      <section class="card">
-        <div class="card-inner">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Lifetime Access</h2>
-              <p class="card-sub">Everything unlocked forever</p>
-            </div>
-            <span class="chip" style="border-color:rgba(255,138,0,.35);background:rgba(255,138,0,.10)">Lifetime</span>
-          </div>
-          <ul style="margin:10px 0 0; padding-left:18px; color: var(--muted); font-size:13px; line-height:1.6">
-            <li>Shareable links (when backend ships)</li>
-            <li>Feedback export</li>
-            <li>Early features</li>
-            <li>Support development</li>
-          </ul>
-          <div style="margin-top:14px;font-size:28px;font-weight:900;letter-spacing:-.5px">$39</div>
-          <div class="row" style="margin-top:12px">
-            <button class="btn primary" type="button" disabled title="Checkout not wired yet">Get Lifetime</button>
-            <span class="hint">Checkout coming later.</span>
-          </div>
+        <ul class="checkList">
+          <li>Paste single-file HTML (inline CSS + JS)</li>
+          <li>Launch preview in a sandboxed tab</li>
+          <li>Local autosave (on your device)</li>
+          <li>Basic feedback capture (local)</li>
+        </ul>
+
+        <div class="cardActions">
+          <a class="btn btn--primary" href="index.html">Use Workspace</a>
+          <p class="finePrint">No account required.</p>
         </div>
-      </section>
+      </article>
+
+      <article class="priceCard priceCard--featured" aria-label="Pro plan">
+        <header class="priceTop">
+          <div class="badge badge--soft">Most popular</div>
+          <h2 class="h3">Pro</h2>
+          <div class="priceLine">
+            <span class="price">$12</span>
+            <span class="per">/ month</span>
+          </div>
+          <p class="muted">For weekly validation loops and faster iteration.</p>
+        </header>
+
+        <ul class="checkList">
+          <li>Everything in Free</li>
+          <li>Export feedback as JSON</li>
+          <li>Template prompt presets (Prompt Builder)</li>
+          <li>More starter examples</li>
+        </ul>
+
+        <div class="cardActions">
+          <button class="btn btn--primary" type="button" data-pricing="pro">Choose Pro</button>
+          <p class="finePrint">Cancel anytime.</p>
+        </div>
+      </article>
+
+      <article class="priceCard">
+        <header class="priceTop">
+          <div class="badge badge--solid">Lifetime</div>
+          <h2 class="h3">Lifetime</h2>
+          <div class="priceLine">
+            <span class="price">$149</span>
+            <span class="per">one-time</span>
+          </div>
+          <p class="muted">For people who want VibeSnap available without subscriptions.</p>
+        </header>
+
+        <ul class="checkList">
+          <li>Everything in Pro</li>
+          <li>Priority access to new features</li>
+          <li>Lifetime badge (if accounts are added later)</li>
+          <li>Early access to optional sharing</li>
+        </ul>
+
+        <div class="cardActions">
+          <button class="btn btn--primary" type="button" data-pricing="lifetime">Get Lifetime</button>
+          <p class="finePrint">One purchase. No renewals.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="compare" aria-label="Plan comparison">
+      <h2 class="h2">Compare plans</h2>
+      <p class="muted">
+        All plans are local-first. Your prototypes and notes stay on your device unless you choose to export.
+      </p>
+
+      <div class="tableWrap" role="region" aria-label="Pricing comparison table" tabindex="0">
+        <table class="compareTable">
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Free</th>
+              <th scope="col">Pro</th>
+              <th scope="col">Lifetime</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Paste single-file HTML</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Sandboxed preview tab</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Local autosave</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Feedback capture (local)</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Feedback export (JSON)</th><td>—</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Prompt presets</th><td>—</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">More starter examples</th><td>—</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Early access to sharing</th><td>—</td><td>—</td><td>✓</td></tr>
+            <tr><th scope="row">Lifetime badge (future accounts)</th><td>—</td><td>—</td><td>✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="noteCard">
+        <h3 class="h3">About privacy</h3>
+        <p class="muted">
+          Your ideas stay yours. We don’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save it.
+        </p>
+      </div>
     </section>
 
     <footer class="footer">
-      <div class="wrap">
-        <span>vibesnap.xyz</span>
-        <span>Local-first. Privacy-respecting.</span>
-      </div>
+      <span>vibesnap.xyz</span>
+      <span class="dot" aria-hidden="true">•</span>
+      <span>local-first prototyping</span>
     </footer>
   </main>
 
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
