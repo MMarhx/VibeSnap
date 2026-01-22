@@ -1,420 +1,182 @@
-<!-- =========================
-VIBESNAP — index.html (App)
-========================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VibeSnap — Preview AI-generated prototypes instantly</title>
-  <meta name="description" content="Paste a prototype. Launch it instantly. Run code safely in a sandbox, collect feedback, and validate faster." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeSnap</title>
+
+  <meta name="description" content="Generate prototypes anywhere. Validate them here." />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="shell">
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="brand" role="banner" aria-label="VibeSnap">
-        <div class="mark" aria-hidden="true">🔥</div>
-        <div class="word">vibesnap</div>
-      </div>
 
-      <nav class="topnav" aria-label="Primary">
-        <button class="pill is-active" id="navPreview" type="button" aria-controls="panelPreview" aria-selected="true">Preview prototype</button>
-        <button class="pill" id="navPrompt" type="button" aria-controls="panelPrompt" aria-selected="false">Prompt builder</button>
-        <button class="pill" id="navImport" type="button" aria-controls="panelImport" aria-selected="false">Import helper</button>
-        <a class="pill pill-link" href="pricing.html" aria-label="Go to pricing page">Pricing</a>
-      </nav>
-    </header>
+  <!-- Toast -->
+  <div id="toast" class="toast" aria-live="polite"></div>
 
-    <!-- Hero -->
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="logo">
+      <span class="logo-mark">🔥</span>
+      <span class="logo-text">vibesnap</span>
+    </div>
+
+    <nav class="nav">
+      <button data-nav="app" class="nav-link">App</button>
+      <button data-nav="pricing" class="nav-link">Pricing</button>
+    </nav>
+  </header>
+
+  <!-- App Page -->
+  <main id="pageApp" class="page page-active">
+
     <section class="hero">
-      <h1>Preview AI-generated prototypes instantly</h1>
-      <p class="sub">
-        Generate prototypes anywhere. Validate them here. Paste or upload a single file HTML prototype, run it safely in a sandbox, then test and share.
+      <h1>Prototype fast. Validate faster.</h1>
+      <p class="subtitle">
+        Paste a single-file HTML prototype, launch it instantly, and collect feedback — without setup.
       </p>
+    </section>
 
-      <div class="trust">
-        <span class="chip">Runs locally</span>
-        <span class="chip">Sandboxed preview</span>
-        <span class="chip">No cookies</span>
-        <span class="chip">No tracking pixels</span>
+    <!-- Editor -->
+    <section class="panel">
+      <header class="panel-header">
+        <h2>Prototype HTML</h2>
+        <div class="panel-actions">
+          <button id="btnPasteStarter">Paste starter</button>
+          <button id="btnClearCode">Clear</button>
+        </div>
+      </header>
+
+      <textarea
+        id="codeInput"
+        placeholder="Paste a complete single-file HTML prototype here…"
+        spellcheck="false"
+      ></textarea>
+
+      <div class="panel-footer">
+        <div class="save-status" id="saveStatus">Nothing saved</div>
+        <div class="panel-actions">
+          <button id="btnDownloadHtml">Download HTML</button>
+          <button id="btnLaunch">
+            <span class="btn-label">Launch preview</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Preview -->
+    <section class="panel">
+      <header class="panel-header">
+        <h2>Live preview</h2>
+        <div class="panel-actions">
+          <button id="btnReload">Reload</button>
+        </div>
+      </header>
+
+      <iframe
+        id="previewFrame"
+        sandbox="allow-scripts allow-forms allow-modals"
+        title="Prototype preview"
+      ></iframe>
+    </section>
+
+    <!-- Share -->
+    <section class="panel">
+      <header class="panel-header">
+        <h2>Share for feedback</h2>
+      </header>
+
+      <div class="share-row">
+        <input id="shareLink" type="text" placeholder="Create a share link…" readonly />
+        <button id="btnCreateShare">Create</button>
       </div>
 
-      <p class="privacy">
-        Your ideas stay yours. We don’t train on them, sell them, or inspect them. Nothing is stored unless you choose to save or share.
-      </p>
+      <div class="panel-actions">
+        <button id="btnCopyShareLink">Copy link</button>
+        <button id="btnCopyShareText">Copy feedback prompt</button>
+        <button id="btnOpenNewTab">Open</button>
+        <button id="btnResetLink">Clear</button>
+      </div>
     </section>
 
-    <!-- Panels -->
-    <section class="panels">
+    <!-- Feedback -->
+    <section class="panel">
+      <header class="panel-header">
+        <h2>Feedback</h2>
+      </header>
 
-      <!-- =========================
-      PANEL: Preview prototype
-      ========================= -->
-      <section id="panelPreview" class="panel is-active" role="region" aria-label="Preview prototype">
-        <div class="grid2">
-          <!-- Left: input -->
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Prototype code</div>
-                <div class="title">Paste a single file HTML prototype</div>
-                <div class="muted">Inline CSS + JS recommended. Keep it self contained for best results.</div>
-              </div>
+      <div class="sentiment">
+        <button data-sentiment="useful">Useful</button>
+        <button data-sentiment="confusing">Confusing</button>
+        <button data-sentiment="needs-work">Needs work</button>
+      </div>
 
-              <div class="actions">
-                <button class="btn ghost" id="btnPasteStarter" type="button">Paste starter</button>
-                <button class="btn ghost" id="btnDownloadHtml" type="button">Download HTML</button>
-                <button class="btn ghost" id="btnClearEditor" type="button">Clear</button>
-              </div>
-            </div>
+      <textarea
+        id="feedbackText"
+        placeholder="What worked? What didn’t?"
+      ></textarea>
 
-            <label class="sr" for="codeInput">Prototype HTML</label>
-            <textarea id="codeInput" class="codearea" spellcheck="false" placeholder="Paste your single file HTML here…"></textarea>
+      <div class="panel-actions">
+        <button id="btnSubmitFeedback">Save feedback</button>
+        <button id="btnClearFeedback">Clear</button>
+        <button id="btnExportFeedback">Export</button>
+      </div>
 
-            <div class="row">
-              <button class="btn primary" id="btnLaunch" type="button">
-                <span class="btn-label">Launch preview</span>
-                <span class="spinner" aria-hidden="true"></span>
-              </button>
-
-              <div class="status">
-                <span id="saveStatus" class="muted">Nothing saved</span>
-                <button class="linkbtn" id="btnClearSaved" type="button">Clear saved</button>
-              </div>
-            </div>
-
-            <div class="sectionline"></div>
-
-            <div class="kicker">Share + validate</div>
-            <div class="muted">Create a share link that opens this prototype on this device. (Backend sharing comes later.)</div>
-
-            <div class="row shareRow">
-              <button class="btn" id="btnCreateShare" type="button">Create share link</button>
-              <button class="btn" id="btnOpenNewTab" type="button">Open preview in new tab</button>
-            </div>
-
-            <div class="shareBox">
-              <label class="small muted" for="shareLink">Share link</label>
-              <div class="shareInputRow">
-                <input id="shareLink" type="text" readonly value="" placeholder="Create a link…" />
-                <button class="btn" id="btnCopyShare" type="button">Copy</button>
-              </div>
-              <div class="muted tiny">
-                Tip: post a screenshot + one question (e.g., “Would you use this?”) and link the preview.
-              </div>
-
-              <div class="row shareTextRow">
-                <button class="btn ghost" id="btnCopyShareText" type="button">Copy share text</button>
-                <button class="btn ghost" id="btnResetShare" type="button">Reset link</button>
-              </div>
-            </div>
-
-            <div class="sectionline"></div>
-
-            <div class="kicker">Safety note</div>
-            <div class="muted tiny">
-              This preview runs inside a sandboxed iframe. It can’t read your parent page.
-              If your prototype loads external scripts/assets, they may be blocked depending on the browser.
-            </div>
-          </div>
-
-          <!-- Right: preview -->
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Live preview</div>
-                <div class="muted">Your prototype runs here. Use Reload if it gets stuck.</div>
-              </div>
-              <div class="actions">
-                <button class="btn ghost" id="btnReloadPreview" type="button">Reload</button>
-              </div>
-            </div>
-
-            <div class="previewFrameWrap" aria-label="Sandbox preview">
-              <iframe
-                id="previewFrame"
-                title="Prototype preview"
-                sandbox="allow-scripts allow-forms allow-modals"
-                referrerpolicy="no-referrer"
-              ></iframe>
-            </div>
-
-            <div class="muted tiny" style="margin-top:10px;">
-              Prototype only. Not production hosting.
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom row -->
-        <div class="grid2 bottom">
-          <!-- Feedback -->
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Feedback collection</div>
-                <div class="muted">Designed for quick validation. Keep it simple.</div>
-              </div>
-              <div class="actions">
-                <button class="btn ghost" id="btnExportFeedback" type="button">Export feedback</button>
-                <button class="btn ghost" id="btnClearFeedback" type="button">Clear</button>
-              </div>
-            </div>
-
-            <div class="toggleRow" role="group" aria-label="Quick rating">
-              <label class="toggle">
-                <input type="radio" name="rating" value="useful" />
-                <span>👍 Useful</span>
-              </label>
-              <label class="toggle">
-                <input type="radio" name="rating" value="not_useful" />
-                <span>👎 Not useful</span>
-              </label>
-            </div>
-
-            <label class="sr" for="feedbackText">Feedback</label>
-            <textarea id="feedbackText" class="textarea" placeholder="One sentence is enough. What confused you? What would you change? Would you use this?"></textarea>
-
-            <div class="row">
-              <button class="btn primary" id="btnSubmitFeedback" type="button">Submit feedback</button>
-              <div class="muted tiny" id="feedbackSaveNote">Saved locally</div>
-            </div>
-
-            <div class="sectionline"></div>
-
-            <div class="kicker">Recent feedback</div>
-            <div id="feedbackList" class="feedList" aria-live="polite"></div>
-          </div>
-
-          <!-- Analytics -->
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Lightweight analytics</div>
-                <div class="muted">Local first. No identity. Just actions.</div>
-              </div>
-              <div class="actions">
-                <button class="btn ghost" id="btnResetAnalytics" type="button">Reset</button>
-              </div>
-            </div>
-
-            <div class="metrics">
-              <div class="metric">
-                <div class="muted tiny">Views</div>
-                <div class="metricNum" id="mViews">0</div>
-              </div>
-              <div class="metric">
-                <div class="muted tiny">Launches</div>
-                <div class="metricNum" id="mLaunches">0</div>
-              </div>
-              <div class="metric">
-                <div class="muted tiny">Feedback</div>
-                <div class="metricNum" id="mFeedback">0</div>
-              </div>
-            </div>
-
-            <div class="sectionline"></div>
-
-            <div class="kicker">How to validate fast</div>
-            <ul class="bullets">
-              <li>Ask one question: “Would you use this?” or “What’s missing?”</li>
-              <li>Share a link with a short sentence and a screenshot.</li>
-              <li>Iterate quickly. Don’t overbuild.</li>
-            </ul>
-
-            <div class="muted tiny" style="margin-top:10px;">
-              Ethical metric policy: we measure actions, not people.
-            </div>
-          </div>
-        </div>
-
-        <section class="why">
-          <h2>Why VibeSnap exists</h2>
-          <p class="muted">
-            Starting is not the problem anymore. AI can generate code anywhere, but most builders still require setup, tokens, or a hosting step before you can show anything real. The bottleneck is running it, sharing it, and learning from feedback fast. VibeSnap removes that friction.
-          </p>
-          <div class="ctaStrip">
-            <div class="ctaText">
-              <div class="ctaTitle">Paste code. Launch instantly. Test and share.</div>
-              <div class="muted tiny">No signups required for local previews.</div>
-            </div>
-            <a class="btn primary" href="pricing.html">See pricing</a>
-          </div>
-        </section>
-      </section>
-
-      <!-- =========================
-      PANEL: Prompt builder
-      ========================= -->
-      <section id="panelPrompt" class="panel" role="region" aria-label="Prompt builder">
-        <div class="card">
-          <div class="cardhead">
-            <div>
-              <div class="kicker">Prompt builder</div>
-              <div class="title">Generate a prototype-ready prompt for any AI tool</div>
-              <div class="muted">Fill this out, copy the prompt, paste into ChatGPT, Claude, Gemini, or your favorite model. Ask for a single HTML file output.</div>
-            </div>
-            <div class="actions">
-              <button class="btn" id="btnCopyPrompt" type="button">Copy prompt</button>
-              <button class="btn ghost" id="btnResetPrompt" type="button">Reset</button>
-            </div>
-          </div>
-
-          <div class="formGrid">
-            <div class="field">
-              <label for="pbIdea">What are you trying to test?</label>
-              <input id="pbIdea" type="text" placeholder="Example: spending tracker for roommates" />
-            </div>
-
-            <div class="field">
-              <label for="pbAudience">Who is it for?</label>
-              <input id="pbAudience" type="text" placeholder="Example: people splitting bills" />
-            </div>
-
-            <div class="field">
-              <label for="pbGoal">Primary goal</label>
-              <input id="pbGoal" type="text" placeholder="Example: log expenses fast and see totals" />
-            </div>
-
-            <div class="field">
-              <label for="pbScreens">Key screens (comma separated)</label>
-              <input id="pbScreens" type="text" placeholder="Dashboard, Add expense, History" />
-            </div>
-
-            <div class="field">
-              <label for="pbInteractions">Must have interactions</label>
-              <input id="pbInteractions" type="text" placeholder="Add item, edit, delete, totals update" />
-            </div>
-
-            <div class="field">
-              <label for="pbData">Data to store</label>
-              <input id="pbData" type="text" placeholder="amount, category, note, date" />
-            </div>
-
-            <div class="field">
-              <label for="pbStyle">Style</label>
-              <select id="pbStyle">
-                <option value="dark-modern">Clean modern (dark mode friendly)</option>
-                <option value="light-clean">Clean light</option>
-                <option value="playful">Playful</option>
-                <option value="minimal">Ultra minimal</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="pbNotes">Extra notes (optional)</label>
-              <input id="pbNotes" type="text" placeholder="Example: include realistic empty states" />
-            </div>
-          </div>
-
-          <div class="sectionline"></div>
-
-          <div class="kicker">Generated prompt</div>
-          <textarea id="promptOut" class="codearea" spellcheck="false" readonly></textarea>
-
-          <div class="muted tiny" style="margin-top:10px;">
-            Tip: ask for a <b>single self contained HTML file</b> with inline CSS and JS, no external libraries, and a tiny “prototype” label.
-          </div>
-        </div>
-      </section>
-
-      <!-- =========================
-      PANEL: Import helper
-      ========================= -->
-      <section id="panelImport" class="panel" role="region" aria-label="Import helper">
-        <div class="grid2">
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Import helper</div>
-                <div class="title">Turn “separate files” into one pasteable HTML</div>
-                <div class="muted">If an AI gives you HTML + CSS + JS separately, combine them here.</div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnAssemble" type="button">Assemble</button>
-                <button class="btn ghost" id="btnAssembleToEditor" type="button">Assemble → Editor</button>
-                <button class="btn ghost" id="btnImportClear" type="button">Clear</button>
-              </div>
-            </div>
-            <div class="importStates" aria-label="Import status">
-              <div class="importHint">
-                <div class="kicker">Preferred</div>
-                <div class="muted">Drop a single HTML file with inline CSS and JS. Fastest path.</div>
-              </div>
-
-              <div class="importRows" role="group" aria-label="File uploads">
-                <div class="importRow" id="rowInline">
-                  <span class="rowLabel">Inline HTML</span>
-                  <span class="rowState muted" id="stateInline">Drop a single file to detect inline CSS and JS</span>
-                </div>
-                <div class="importRow">
-                  <span class="rowLabel">HTML</span>
-                  <span class="rowState muted" id="stateHtml">Upload HTML file or paste below</span>
-                </div>
-                <div class="importRow">
-                  <span class="rowLabel">CSS</span>
-                  <span class="rowState muted" id="stateCss">Optional. Upload CSS file or paste below</span>
-                </div>
-                <div class="importRow">
-                  <span class="rowLabel">JavaScript</span>
-                  <span class="rowState muted" id="stateJs">Optional. Upload JS file or paste below</span>
-                </div>
-              </div>
-
-              <div class="dropMini" id="dropMini" aria-label="Drop files here">
-                <div class="muted">Drop HTML, CSS, or JS files here</div>
-                <div class="muted tiny">You can still paste split code below</div>
-              </div>
-            </div>
-
-            <div class="sectionline"></div>
-<div class="field">
-              <label for="impHtml">HTML (body markup is fine)</label>
-              <textarea id="impHtml" class="textarea" spellcheck="false" placeholder="<div>...</div>"></textarea>
-            </div>
-
-            <div class="field">
-              <label for="impCss">CSS</label>
-              <textarea id="impCss" class="textarea" spellcheck="false" placeholder="body { ... }"></textarea>
-            </div>
-
-            <div class="field">
-              <label for="impJs">JS</label>
-              <textarea id="impJs" class="textarea" spellcheck="false" placeholder="document.querySelector(...)"></textarea>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="cardhead">
-              <div>
-                <div class="kicker">Output</div>
-                <div class="title">Single file HTML</div>
-                <div class="muted">Copy this into the Preview tab and launch.</div>
-              </div>
-              <div class="actions">
-                <button class="btn" id="btnCopyAssembled" type="button">Copy</button>
-                <button class="btn ghost" id="btnDownloadAssembled" type="button">Download</button>
-              </div>
-            </div>
-
-            <textarea id="assembledOut" class="codearea" spellcheck="false" readonly placeholder="Assembled HTML will appear here…"></textarea>
-
-            <div class="muted tiny" style="margin-top:10px;">
-              Note: external assets may be blocked in the sandbox. If your prototype depends on external libraries, try asking the AI for “no external libraries”.
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <div id="feedbackSaveStatus" class="save-status"></div>
+      <div id="recentFeedback" class="feedback-list"></div>
     </section>
 
-    <footer class="foot">
-      <span>vibesnap.xyz</span>
-      <span class="dot">•</span>
-      <span>generate anywhere, validate here</span>
-    </footer>
+    <!-- Metrics -->
+    <section class="metrics">
+      <div class="metric"><strong id="statViews">0</strong><span>Views</span></div>
+      <div class="metric"><strong id="statLaunches">0</strong><span>Launches</span></div>
+      <div class="metric"><strong id="statFeedback">0</strong><span>Feedback</span></div>
+      <button id="btnResetAnalytics">Reset analytics</button>
+    </section>
+
   </main>
+
+  <!-- Pricing Page -->
+  <main id="pagePricing" class="page">
+
+    <section class="hero">
+      <h1>Simple pricing</h1>
+      <p class="subtitle">Pay only when you need to share and validate.</p>
+    </section>
+
+    <section class="pricing-grid">
+      <div class="price-card">
+        <h3>Free</h3>
+        <p>Local prototyping only</p>
+        <ul>
+          <li>Paste & preview HTML</li>
+          <li>Local feedback</li>
+          <li>No accounts</li>
+        </ul>
+        <span class="price">$0</span>
+      </div>
+
+      <div class="price-card featured">
+        <div class="badge">Lifetime</div>
+        <h3>Lifetime Access</h3>
+        <p>Everything unlocked forever</p>
+        <ul>
+          <li>Shareable links</li>
+          <li>Feedback export</li>
+          <li>Early features</li>
+          <li>Support development</li>
+        </ul>
+        <span class="price">$39</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>vibesnap.xyz</span>
+    <span class="dot">•</span>
+    <span>Local-first. Privacy-respecting.</span>
+  </footer>
 
   <script src="app.js"></script>
 </body>
