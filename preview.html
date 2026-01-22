@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSnap — Preview</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="preview-shell">
+    <div class="preview-top">
+      <div class="left">
+        <a class="brand" href="index.html" aria-label="Back to workspace">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="word">vibesnap</span>
+        </a>
+        <div class="meta" id="previewMeta">Preview</div>
+      </div>
+      <div class="row">
+        <button class="btn small" id="btnReload" type="button">Reload</button>
+        <a class="btn small" href="index.html">Back to workspace</a>
+      </div>
+    </div>
+
+    <div class="preview-frame">
+      <iframe id="frame" sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts" title="Prototype preview"></iframe>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="title" id="toastTitle">Loaded</div>
+    <div class="msg" id="toastMsg">Preview ready.</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
