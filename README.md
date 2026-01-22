@@ -13,7 +13,7 @@ and collect lightweight feedback — without setup, accounts, or tracking.
 - No analytics creep
 
 ## Status
-Early prototype. UX and backend coming next.
+This is an early prototype focused on fast validation and usability. Backend, sharing infrastructure, and deeper iteration will follow based on real user feedback.
 
 ## How it works
 1. Paste a single-file HTML prototype (with inline CSS + JS)
